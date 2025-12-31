@@ -15,3 +15,7 @@ Thumbs.db
 
 # User specific
 *.local
+
+# Backend specific
+*.csproj.user
+ScraperAPI.http
