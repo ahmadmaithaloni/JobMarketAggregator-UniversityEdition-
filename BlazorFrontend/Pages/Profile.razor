@@ -1,0 +1,92 @@
+@page "/profile"
+@inject ApiService Api
+@inject NavigationManager Nav
+
+<div class="container fade-in">
+    @if (Api.CurrentUser == null)
+    {
+        <div class="card" style="text-align: center; padding: 3rem;">
+            <p>You need to be logged in to view your profile.</p>
+            <a href="login" class="btn btn-primary">Login Now</a>
+        </div>
+    }
+    else
+    {
+        <div class="top-bar" style="margin-bottom: 1rem;">
+            <span class="brand">My Profile</span>
+            <button class="btn" style="background: transparent; color: #ef4444; border: 1px solid #ef4444;" @onclick="Logout">
+                Logout
+            </button>
+        </div>
+
+        <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 2rem;">
+            <div style="width: 100px; height: 100px; background-color: #dbeafe; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; font-size: 3rem;">
+                👤
+            </div>
+            <h3 style="margin:0;">@Api.CurrentUser.UserName</h3>
+            <span style="color: var(--text-muted);">@Api.CurrentUser.UserEmail</span>
+        </div>
+
+        <div class="card">
+            <h4 style="margin-bottom: 1rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">Security</h4>
+            
+            <div class="input-group">
+                <span class="input-label">New Password</span>
+                <input @bind="newPassword" type="password" class="form-control" placeholder="Leave empty to keep current" />
+            </div>
+            
+            <button class="btn btn-primary" @onclick="UpdatePassword" disabled="@isSaving">
+                Update Password
+            </button>
+        </div>
+        
+        <!-- Add other edit sections here if needed, keeping it simple for now -->
+        
+        @if (!string.IsNullOrEmpty(message))
+        {
+            <div style="margin-top: 1rem; padding: 1rem; border-radius: 8px; text-align: center; color: @(isError ? "#991b1b" : "#166534"); background-color: @(isError ? "#fef2f2" : "#f0fdf4"); border: 1px solid @(isError ? "#fee2e2" : "#bbf7d0");">
+                @message
+            </div>
+        }
+    }
+    
+    <div style="height: 60px;"></div>
+</div>
+
+@code {
+    private string newPassword = "";
+    private string message = "";
+    private bool isError = false;
+    private bool isSaving = false;
+
+    private void Logout()
+    {
+        Api.Logout();
+        Nav.NavigateTo("/login");
+    }
+
+    private async Task UpdatePassword()
+    {
+        if (string.IsNullOrWhiteSpace(newPassword)) return;
+        
+        isSaving = true;
+        message = "";
+        isError = false;
+
+        try
+        {
+            await Api.UpdatePassword(newPassword);
+            message = "Password updated successfully.";
+            newPassword = "";
+        }
+        catch (Exception ex)
+        {
+            isError = true;
+            message = "Failed: " + ex.Message;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}

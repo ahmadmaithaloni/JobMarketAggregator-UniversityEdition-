@@ -1,0 +1,99 @@
+@page "/register"
+@inject ApiService Api
+@inject NavigationManager Nav
+
+<div class="container fade-in">
+    <div class="card" style="max-width: 500px; margin: 2rem auto;">
+        <h2 style="text-align: center; margin-bottom: 1.5rem; color: var(--primary-color);">Create Account</h2>
+        
+        <div class="input-group">
+            <span class="input-label">Username</span>
+            <input @bind="profile.UserName" class="form-control" />
+        </div>
+
+        <div class="input-group">
+            <span class="input-label">Email</span>
+            <input @bind="profile.UserEmail" class="form-control" type="email" />
+        </div>
+
+        <div class="input-group">
+            <span class="input-label">Password (Min 8 chars, 1 Uppercase, 1 Digit, 1 Symbol)</span>
+            <input @bind="profile.UserPassword" class="form-control" type="password" />
+        </div>
+
+        <div class="input-group">
+            <span class="input-label">Phone (077/078/079 + 7 digits)</span>
+            <input @bind="profile.UserPhone" class="form-control" placeholder="079xxxxxxx" />
+        </div>
+
+        <div class="input-group">
+            <span class="input-label">Major</span>
+            <input @bind="profile.UserMajor" class="form-control" />
+        </div>
+        
+        <div class="input-group">
+            <span class="input-label">Address</span>
+            <input @bind="profile.UserAddress" class="form-control" />
+        </div>
+
+        @if (!string.IsNullOrEmpty(error))
+        {
+            <div style="color: #ef4444; font-size: 0.9rem; margin-bottom: 1rem; text-align: center;">
+                @error
+            </div>
+        }
+        
+        @if (!string.IsNullOrEmpty(success))
+        {
+            <div style="color: #166534; font-size: 0.9rem; margin-bottom: 1rem; text-align: center;">
+                @success
+            </div>
+        }
+
+        <button class="btn btn-primary" @onclick="HandleRegister" disabled="@isLoading">
+            @(isLoading ? "Creating Account..." : "Sign Up")
+        </button>
+        
+         <div style="text-align: center; margin-top: 1rem; font-size: 0.9rem;">
+            <span style="color: var(--text-muted);">Already have an account? </span>
+            <a href="/" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">Sign In</a>
+        </div>
+    </div>
+</div>
+
+@code {
+    private UserProfile profile = new UserProfile();
+    private string error = "";
+    private string success = "";
+    private bool isLoading = false;
+
+    private async Task HandleRegister()
+    {
+        isLoading = true;
+        error = "";
+        success = "";
+
+        try
+        {
+            // Basic validation
+            if (string.IsNullOrEmpty(profile.UserName) || string.IsNullOrEmpty(profile.UserPassword)) 
+            {
+                error = "Username and Password are required.";
+                return;
+            }
+
+            await Api.Register(profile);
+            success = "Account created! Redirecting to login...";
+            await Task.Delay(2000);
+            Nav.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

@@ -1,0 +1,61 @@
+@page "/"
+@page "/login"
+@inject ApiService Api
+@inject NavigationManager Nav
+
+<div class="container fade-in" style="max-width: 400px; padding-top: 4rem;">
+    <div class="card" style="text-align: center; padding: 2.5rem; border: none; box-shadow: none; background: transparent;">
+        <h1 style="font-weight: 800; margin-bottom: 2rem; color: var(--text-main);">Welcome Back</h1>
+        
+        <div class="input-group">
+            <span class="input-label">Email</span>
+            <input @bind="email" class="form-control" type="email" placeholder="john@example.com" />
+        </div>
+
+        <div class="input-group">
+            <span class="input-label">Password</span>
+            <input @bind="password" class="form-control" type="password" placeholder="••••••••" />
+        </div>
+
+        @if (!string.IsNullOrEmpty(error))
+        {
+            <div style="color: #ef4444; font-size: 0.9rem; margin-bottom: 1rem; text-align: center;">
+                @error
+            </div>
+        }
+
+        <button class="btn btn-primary" @onclick="HandleLogin" disabled="@isLoading">
+            @(isLoading ? "Signing In..." : "Sign In")
+        </button>
+
+        <div style="text-align: center; margin-top: 1rem; font-size: 0.9rem;">
+            <span style="color: var(--text-muted);">Don't have an account? </span>
+            <a href="register" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">Sign Up</a>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string email = "";
+    private string password = "";
+    private string error = "";
+    private bool isLoading = false;
+
+    private async Task HandleLogin()
+    {
+        isLoading = true;
+        error = "";
+        
+        bool success = await Api.Login(email, password);
+        if (success)
+        {
+            Nav.NavigateTo("/dashboard");
+        }
+        else
+        {
+            error = "Invalid email or password";
+        }
+        
+        isLoading = false;
+    }
+}

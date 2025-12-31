@@ -1,0 +1,53 @@
+@page "/job-details"
+@inject ApiService Api
+@inject NavigationManager Nav
+
+<div class="container fade-in">
+    <button class="btn" style="background: transparent; color: var(--primary-color); margin-bottom: 1rem; padding: 0;" @onclick="GoBack">
+        ← Back to Search
+    </button>
+
+    @if (Api.SelectedJob == null)
+    {
+        <div class="card" style="text-align: center; padding: 3rem;">
+            <p>No job selected.</p>
+            <button class="btn btn-primary" @onclick="GoBack">Go Home</button>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <h1 style="color: var(--primary-color); margin-bottom: 0.5rem;">@Api.SelectedJob.JobName</h1>
+            <div style="color: var(--text-muted); margin-bottom: 1.5rem;">
+                @Api.SelectedJob.SiteName • @Api.SelectedJob.JobLocation
+            </div>
+
+            <div style="background-color: #f8fafc; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+                <h4 style="margin-top: 0;">Job Description</h4>
+                <p style="white-space: pre-wrap; line-height: 1.6;">@Api.SelectedJob.JobDescription</p>
+                
+                @if (!string.IsNullOrEmpty(Api.SelectedJob.JobNotes))
+                {
+                     <div style="margin-top: 1rem; font-size: 0.9rem; color: #64748b;">
+                        <strong>Note:</strong> @Api.SelectedJob.JobNotes
+                     </div>
+                }
+            </div>
+
+            <div style="display: flex; gap: 1rem;">
+                <a href="@Api.SelectedJob.JobUrl" target="_blank" class="btn btn-primary" style="text-decoration: none; flex: 1; text-align: center;">
+                    Apply Now on @Api.SelectedJob.SiteName ↗
+                </a>
+            </div>
+        </div>
+    }
+    
+     <div style="height: 60px;"></div>
+</div>
+
+@code {
+    private void GoBack()
+    {
+        Nav.NavigateTo("dashboard");
+    }
+}

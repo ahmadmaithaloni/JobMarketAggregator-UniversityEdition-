@@ -1,0 +1,244 @@
+﻿@page "/dashboard"
+@inject ApiService Api
+@inject NavigationManager Nav
+
+<div class="container fade-in">
+    @if (Api.CurrentUser == null)
+    {
+        <div style="text-align: center; padding-top: 4rem;">
+            <p>Redirecting to login...</p>
+        </div>
+    }
+    else
+    {
+        <!-- Section 1: Recent Topics (Dashboard) -->
+        <div style="margin-bottom: 2.5rem;">
+            <h2 style="font-size: 1.1rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 1rem;">
+                Recent Searches
+            </h2>
+            
+            @if (recentQueries.Any())
+            {
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+                    @foreach (var q in recentQueries)
+                    {
+                        <div class="card" @onclick="() => LoadQuery(q)" style="padding: 1rem; cursor: pointer; border: 1px solid var(--border); transition: all 0.2s; display: flex; align-items: center; gap: 0.75rem;">
+                            <div style="background: var(--bg-surface); padding: 0.5rem; border-radius: 50%; display: flex;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            </div>
+                            <div>
+                                <div style="font-weight: 600; color: var(--text-main); font-size: 0.95rem;">@q.QjobName</div>
+                                <div style="font-size: 0.8rem; color: var(--text-muted);">@q.QjobLocation</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <p style="font-style: italic; opacity: 0.6;">No recent searches yet.</p>
+            }
+        </div>
+
+        <!-- Section 2: Search Section -->
+        <div style="margin-bottom: 2rem;">
+            <h2 style="font-size: 1.1rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 1rem;">
+                New Search
+            </h2>
+            <div class="card" style="padding: 1.5rem; border: none; background: var(--bg-card); box-shadow: var(--shadow);">
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 250px;">
+                        <label class="input-label">Job Title</label>
+                        <div style="position: relative;">
+                            <input @bind="query.JobName" class="form-control" placeholder="e.g. Software Engineer" style="padding-left: 2.5rem;" />
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                        </div>
+                    </div>
+                    
+                    <div style="flex: 1; min-width: 250px;">
+                        <label class="input-label">Location</label>
+                         <div style="position: relative;">
+                            <input @bind="query.Location" class="form-control" placeholder="e.g. Jordan" style="padding-left: 2.5rem;" />
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" @onclick="Search" disabled="@isLoading" style="margin-top: 1.5rem; width: 100%;">
+                    @if (isLoading)
+                    {
+                        <span>Searching...</span>
+                    }
+                    else
+                    {
+                        <span style="display: flex; align-items: center; gap: 0.5rem;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            Find Jobs
+                        </span>
+                    }
+                </button>
+            </div>
+        </div>
+
+        <!-- Error Message -->
+        @if (!string.IsNullOrEmpty(error))
+        {
+            <div class="card" style="background-color: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444; color: #ef4444; margin-bottom: 2rem;">
+                @error
+            </div>
+        }
+
+        <!-- Results Area -->
+    @if (isLoading)
+    {
+        <!-- Skeleton Loading State -->
+        <div style="margin-top: 2rem;">
+            <div class="skeleton" style="height: 1.5rem; width: 150px; margin-bottom: 1rem;"></div>
+            <div style="display: grid; gap: 1rem;">
+                @for (int i = 0; i < 3; i++)
+                {
+                    <div class="card skeleton-card">
+                        <div style="display: flex; justify-content: space-between;">
+                            <div style="width: 70%;">
+                                <div class="skeleton" style="height: 1.5rem; width: 60%; margin-bottom: 0.5rem;"></div>
+                                <div class="skeleton" style="height: 1rem; width: 40%;"></div>
+                            </div>
+                            <div class="skeleton" style="height: 2rem; width: 2rem; border-radius: 50%;"></div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    else if (jobs.Any())
+    {
+        <div>
+             <h2 style="font-size: 1.1rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 1rem;">
+                Results (@jobs.Count)
+            </h2>
+
+            <div style="display: grid; gap: 1rem;">
+                @foreach (var job in jobs)
+                {
+                    <div class="card result-card" @onclick="() => ViewJob(job)" style="cursor: pointer; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div>
+                                <h3 style="margin: 0; color: var(--text-main); font-size: 1.1rem;">@job.JobName</h3>
+                                <div style="color: var(--text-muted); font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18" /><path d="M5 21V7l8-4 8 4v14" /><path d="M17 21v-8.5a2.5 2.5 0 0 0-5 0V21" /></svg>
+                                    <span>@job.SiteName</span>
+                                    <span>•</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                                    <span>@job.JobLocation</span>
+                                </div>
+                            </div>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    else if (!isLoading && !string.IsNullOrEmpty(query.JobName)) 
+    {
+         <!-- Only show "No results" if user actually searched -->
+    }
+    
+}
+<div style="height: 80px;"></div>
+</div>
+
+@code {
+    private JobQuery query = new JobQuery 
+    { 
+        LowSalary = 1000, 
+        HighSalary = 10000 
+    };
+    private List<ScrapedJob> jobs = new List<ScrapedJob>();
+    private List<JobQuery> recentQueries = new List<JobQuery>();
+    private bool isLoading = false;
+    private string error = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Api.CurrentUser == null)
+        {
+            Nav.NavigateTo("/");
+            return;
+        }
+        
+        // Restore state if available
+        if (Api.CurrentJobList != null && Api.CurrentJobList.Any())
+        {
+            jobs = Api.CurrentJobList;
+        }
+        
+        try 
+        {
+            recentQueries = await Api.GetMyQueries();
+        }
+        catch {}
+    }
+
+    private async Task Search()
+    {
+        if (Api.CurrentUser == null) return;
+        
+        if (string.IsNullOrWhiteSpace(query.JobName) || string.IsNullOrWhiteSpace(query.Location))
+        {
+            error = "Please enter both job title and location.";
+            return;
+        }
+
+        isLoading = true;
+        error = "";
+        
+        try
+        {
+            jobs = await Api.SearchJobs(query);
+            recentQueries = await Api.GetMyQueries();
+        }
+        catch (Exception ex)
+        {
+            error = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadQuery(JobQuery q)
+    {
+        // 1. Pre-fill inputs
+        query.JobName = q.QjobName;
+        query.Location = q.QjobLocation;
+        
+        // 2. Fetch jobs directly from DB
+        isLoading = true;
+        error = "";
+        
+        try
+        {
+            jobs = await Api.GetJobsByQueryId(q.QueryId);
+            
+            // Optional: If no jobs found in DB (old query?), logic could trigger a new scrape here.
+            // For now, we respect the user's request to "fetch from db".
+        }
+        catch (Exception ex)
+        {
+            error = $"Error loading query: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ViewJob(ScrapedJob job)
+    {
+        Api.SelectedJob = job;
+        Nav.NavigateTo("/job-details");
+    }
+}
+
+

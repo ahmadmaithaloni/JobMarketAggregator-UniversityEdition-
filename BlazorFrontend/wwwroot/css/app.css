@@ -1,0 +1,303 @@
+:root {
+    /* Light Mode - Monochrome Premium */
+    --primary: #0f172a;
+    /* Slate 900 */
+    --primary-fg: #ffffff;
+    /* Text on primary */
+
+    --bg-body: #ffffff;
+    /* Pure White */
+    --bg-surface: #f8fafc;
+    /* Very Light Gray for contrast */
+    --bg-card: #ffffff;
+
+    --text-main: #020617;
+    /* Almost Black */
+    --text-muted: #64748b;
+    /* Slate 500 */
+
+    --border: #e2e8f0;
+    /* Slate 200 */
+    --input-bg: #f8fafc;
+
+    --radius: 12px;
+    --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.025);
+
+    --hero-gradient: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        /* Dark Mode - OLED Friendly */
+        --primary: #f8fafc;
+        /* White */
+        --primary-fg: #0f172a;
+        /* Black text on white button */
+
+        --bg-body: #020617;
+        /* Slate 950 */
+        --bg-surface: #0f172a;
+        /* Slate 900 */
+        --bg-card: #0f172a;
+
+        --text-main: #f8fafc;
+        /* White */
+        --text-muted: #94a3b8;
+        /* Slate 400 */
+
+        --border: #1e293b;
+        /* Slate 800 */
+        --input-bg: #1e293b;
+
+        --shadow: none;
+        /* Flat look for dark mode */
+
+        --hero-gradient: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    }
+}
+
+/* Manual Overrides */
+body.dark-mode {
+    --primary: #f8fafc;
+    --primary-fg: #0f172a;
+    --bg-body: #020617;
+    --bg-surface: #0f172a;
+    --bg-card: #0f172a;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --border: #1e293b;
+    --input-bg: #1e293b;
+    --shadow: none;
+    --hero-gradient: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+}
+
+body.light-mode {
+    --primary: #0f172a;
+    --primary-fg: #ffffff;
+    --bg-body: #ffffff;
+    --bg-surface: #f8fafc;
+    --bg-card: #ffffff;
+    --text-main: #020617;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --input-bg: #f8fafc;
+    --radius: 12px;
+    --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.025);
+    --hero-gradient: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+}
+
+body {
+    background-color: var(--bg-body);
+    color: var(--text-main);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0;
+    padding-bottom: 80px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* Utilities */
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+/* Cards */
+.card {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    margin-bottom: 1rem;
+    border: 1px solid var(--border);
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+/* Typography */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    color: var(--text-main);
+    margin-top: 0;
+}
+
+p {
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+/* Buttons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius);
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    text-decoration: none;
+    font-size: 0.95rem;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: var(--primary-fg);
+}
+
+.btn-primary:not(:disabled):hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Inputs */
+.form-control {
+    width: 100%;
+    padding: 0.875rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 1rem;
+    background-color: var(--input-bg);
+    color: var(--text-main);
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--text-main);
+    /* Monochrome focus */
+}
+
+/* Header & Nav */
+.top-bar {
+    background: var(--bg-card);
+    padding: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    backdrop-filter: blur(10px);
+    /* Glass effect */
+}
+
+.brand {
+    font-weight: 800;
+    font-size: 1.25rem;
+    color: var(--text-main);
+    text-decoration: none;
+    letter-spacing: -0.5px;
+}
+
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-around;
+    padding: 0.75rem 0;
+    z-index: 20;
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.nav-item.active {
+    color: var(--text-main);
+}
+
+.nav-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+}
+
+/* Custom Components */
+.input-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 0.5rem;
+}
+
+.hero-card {
+    background: var(--hero-gradient) !important;
+    color: white !important;
+}
+
+.hero-card h1,
+.hero-card p {
+    color: white !important;
+}
+
+.result-card:hover {
+    border-color: var(--text-main);
+}
+
+/* Animation */
+.fade-in {
+    animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Skeleton Loading */
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.skeleton {
+    background: var(--border);
+    border-radius: 4px;
+    animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.skeleton-card {
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}

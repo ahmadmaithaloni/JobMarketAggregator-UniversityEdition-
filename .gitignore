@@ -1,0 +1,17 @@
+# .NET
+bin/
+obj/
+.vs/
+.vscode/
+*.user
+*.suo
+[Dd]ebug/
+[Rr]elease/
+*.pubxml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# User specific
+*.local
