@@ -22,6 +22,8 @@ namespace BlazorFrontend.Services
         public void Logout()
         {
             CurrentUser = null;
+            CurrentJobList.Clear();
+            SelectedJob = null;
         }
 
         public async Task<bool> Login(string email, string password)
@@ -112,6 +114,56 @@ namespace BlazorFrontend.Services
              var res = await _http.PutAsync(path, null);
              res.EnsureSuccessStatusCode();
              CurrentUser.UserPassword = newPassword; // Update local state
+        }
+
+        public async Task UpdateUserName(string newName)
+        {
+             if (CurrentUser == null) return;
+             // api/UserManagement/ChangeUserName/v1/{UserID}/{UserPassKey}/{UserNewName}
+             var path = $"{BaseUrl}/api/UserManagement/ChangeUserName/v1/{CurrentUser.UserId}/{Uri.EscapeDataString(CurrentUser.UserPassword)}/{Uri.EscapeDataString(newName)}";
+             var res = await _http.PutAsync(path, null);
+             res.EnsureSuccessStatusCode();
+             CurrentUser.UserName = newName;
+        }
+
+        public async Task UpdateAddress(string newAddress)
+        {
+             if (CurrentUser == null) return;
+             // api/UserManagement/ChangeUserAddress/v1/{UserID}/{UserPassWord}/{UserNewAddress}
+             var path = $"{BaseUrl}/api/UserManagement/ChangeUserAddress/v1/{CurrentUser.UserId}/{Uri.EscapeDataString(CurrentUser.UserPassword)}/{Uri.EscapeDataString(newAddress)}";
+             var res = await _http.PutAsync(path, null);
+             res.EnsureSuccessStatusCode();
+             CurrentUser.UserAddress = newAddress;
+        }
+
+        public async Task UpdateEmail(string newEmail)
+        {
+             if (CurrentUser == null) return;
+             // api/UserManagement/ChangeEmailAddress/v1/{UserID}/{UserPassword}/{UserNewEmail}
+             var path = $"{BaseUrl}/api/UserManagement/ChangeEmailAddress/v1/{CurrentUser.UserId}/{Uri.EscapeDataString(CurrentUser.UserPassword)}/{Uri.EscapeDataString(newEmail)}";
+             var res = await _http.PutAsync(path, null);
+             res.EnsureSuccessStatusCode();
+             CurrentUser.UserEmail = newEmail;
+        }
+
+        public async Task UpdatePhone(string newPhone)
+        {
+             if (CurrentUser == null) return;
+             // api/UserManagement/ChangePhone/v1/{UserID}/{UserPassword}/{UserNewPhone}
+             var path = $"{BaseUrl}/api/UserManagement/ChangePhone/v1/{CurrentUser.UserId}/{Uri.EscapeDataString(CurrentUser.UserPassword)}/{Uri.EscapeDataString(newPhone)}";
+             var res = await _http.PutAsync(path, null);
+             res.EnsureSuccessStatusCode();
+             CurrentUser.UserPhone = newPhone;
+        }
+
+        public async Task UpdateMajor(string newMajor)
+        {
+             if (CurrentUser == null) return;
+             // api/UserManagement/ChangeMajor/v1/{UserID}/{UserPassword}/{UserNewMajor}
+             var path = $"{BaseUrl}/api/UserManagement/ChangeMajor/v1/{CurrentUser.UserId}/{Uri.EscapeDataString(CurrentUser.UserPassword)}/{Uri.EscapeDataString(newMajor)}";
+             var res = await _http.PutAsync(path, null);
+             res.EnsureSuccessStatusCode();
+             CurrentUser.UserMajor = newMajor;
         }
 
         // Add other update methods similarly if needed

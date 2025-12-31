@@ -3,34 +3,42 @@
 @inject ApiService Api
 @inject NavigationManager Nav
 
-<div class="container fade-in" style="max-width: 400px; padding-top: 4rem;">
-    <div class="card" style="text-align: center; padding: 2.5rem; border: none; box-shadow: none; background: transparent;">
-        <h1 style="font-weight: 800; margin-bottom: 2rem; color: var(--text-main);">Welcome Back</h1>
+<div class="container fade-in" style="width: 90%; max-width: 420px; padding-top: 6vh; margin: 0 auto;">
+    <div class="card" style="padding: 2.5rem; border: 1px solid var(--border); background: var(--bg-card); box-shadow: var(--shadow);">
         
-        <div class="input-group">
-            <span class="input-label">Email</span>
-            <input @bind="email" class="form-control" type="email" placeholder="john@example.com" />
+        <div style="text-align: center; margin-bottom: 2.5rem;">
+            <h1 style="font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 2rem; margin-bottom: 0.5rem; background: var(--hero-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2;">
+                Aggregating<br>Opportunities
+            </h1>
+            <p style="font-size: 1rem; color: var(--text-muted);">
+                Your gateway to the global job market.
+            </p>
+        </div>
+        
+        <div class="input-group" style="margin-bottom: 1.25rem; text-align: left;">
+            <label class="input-label" style="margin-left: 2px;">Email Address</label>
+            <input @bind="email" class="form-control" type="email" placeholder="name@company.com" style="padding: 1rem;" />
         </div>
 
-        <div class="input-group">
-            <span class="input-label">Password</span>
-            <input @bind="password" class="form-control" type="password" placeholder="••••••••" />
+        <div class="input-group" style="margin-bottom: 2rem; text-align: left;">
+            <label class="input-label" style="margin-left: 2px;">Password</label>
+            <input @bind="password" class="form-control" type="password" placeholder="••••••••" style="padding: 1rem;" />
         </div>
 
         @if (!string.IsNullOrEmpty(error))
         {
-            <div style="color: #ef4444; font-size: 0.9rem; margin-bottom: 1rem; text-align: center;">
+            <div style="background-color: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444; font-size: 0.9rem; padding: 0.75rem; border-radius: var(--radius); margin-bottom: 1.5rem; text-align: center;">
                 @error
             </div>
         }
 
-        <button class="btn btn-primary" @onclick="HandleLogin" disabled="@isLoading">
-            @(isLoading ? "Signing In..." : "Sign In")
+        <button class="btn btn-primary" @onclick="HandleLogin" disabled="@isLoading" style="width: 100%; padding: 1rem; font-size: 1rem; letter-spacing: 0.5px;">
+            @(isLoading ? "Authenticating..." : "Sign In")
         </button>
 
-        <div style="text-align: center; margin-top: 1rem; font-size: 0.9rem;">
-            <span style="color: var(--text-muted);">Don't have an account? </span>
-            <a href="register" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">Sign Up</a>
+        <div style="text-align: center; margin-top: 1.5rem; font-size: 0.95rem;">
+            <span style="color: var(--text-muted);">New to the platform? </span>
+            <a href="register" style="color: var(--primary-color); text-decoration: none; font-weight: 700; border-bottom: 1px solid transparent; transition: border-color 0.2s;">Create Account</a>
         </div>
     </div>
 </div>

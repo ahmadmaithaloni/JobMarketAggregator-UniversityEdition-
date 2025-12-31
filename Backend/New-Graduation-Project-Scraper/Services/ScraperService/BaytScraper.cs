@@ -56,43 +56,29 @@ namespace ScraperAPI.Services.ScraperService
             // 6. put the scraping method in try block:
             try
             {
-                // 7. locate the job search box from bayt.com and check if it exist or not:
+                // 7. locate the job search box from bayt.com
                 var SearchInput = page.Locator("input[id='text_search']").First; 
                 if (await SearchInput.CountAsync() == 0)
                 {
                     // try another way (by placeholders):
                     SearchInput = page.GetByPlaceholder("Search jobs, skills, companies").First;
                 }
-                // 8. type in the search box:
-                _logger.LogInformation($"the searchbox from bayt.com are now under typing process : searched topic : {QJobName}"); 
-                // 7. Construct Direct Search URL (Permanent Solution)
-                // Pattern: https://www.bayt.com/en/international/jobs/?keyword={name}&country={location}
-                string baseUrl = "https://www.bayt.com/en/international/jobs/";
-                string searchUrl = $"{baseUrl}?keyword={Uri.EscapeDataString(QJobName)}";
+
+                // 8. Type in the search box - Strategy: Combined "Keyword Location" for best relevance
+                string combinedQuery = string.IsNullOrWhiteSpace(QJobLocation) ? QJobName : $"{QJobName} {QJobLocation}";
+                _logger.LogInformation($"Typing combined query in search box: {combinedQuery}"); 
+                await SearchInput.FillAsync(combinedQuery);
                 
-                if (!string.IsNullOrWhiteSpace(QJobLocation))
-                {
-                    // If location is provided, append it. 
-                    // Note: Bayt usually filters by country code in the path, but query param 'country' or 'filters[locations][]' 
-                    // works in broad searches or we can rely on the 'international' endpoint to handle keywords + location text.
-                    // A more robust way for Bayt is simple keyword search which often catches location too, 
-                    // or appending it to the keyword if specific filters fail.
-                    // Let's try appending location to keyword for broader match if specific param fails, 
-                    // but standard 'keyword' usually works best.
-                    searchUrl += $"&locations[]={Uri.EscapeDataString(QJobLocation)}";
-                }
-
-                _logger.LogInformation($"Navigating directly to search URL: {searchUrl}");
-
-                // 8. Navigate directly to results
-                await page.GotoAsync(searchUrl, new PageGotoOptions { Timeout = 60000 });
-
-                // 9. Wait for results to load
+                // 9. Submit Search
+                _logger.LogInformation("Submitting search...");
+                await SearchInput.PressAsync("Enter");
+                
+                // 10. Wait for results to load
                 _logger.LogInformation("Waiting for job listings...");
                 try 
                 {
-                    // Wait for the specific job list container or "No results" message
-                    await page.WaitForSelectorAsync("#results_inner_card, .t-regular", new PageWaitForSelectorOptions { Timeout = 30000 }); 
+                    // Increase timeout for initial search result load
+                    await page.WaitForSelectorAsync("#results_inner_card, .t-regular, li.has-pointer-d", new PageWaitForSelectorOptions { Timeout = 60000 }); 
                 }
                 catch
                 {
@@ -141,15 +127,46 @@ namespace ScraperAPI.Services.ScraperService
                         // 24. visit the link:
                         await page.GotoAsync(link);
                         await page.WaitForLoadStateAsync(LoadState.DOMContentLoaded); // dynamic timer to wait the content
+                        
+                        // 27. grab the job location early to validate:
+                        var LocationItem = await page.QuerySelectorAsync("ul.list.is-basic li span.t-mute")
+                                         ?? await page.QuerySelectorAsync(".job-detail-header .t-mute");
+                        string LocationValue = LocationItem != null ? await LocationItem.InnerTextAsync() : "Unknown";
+                        
+                        // Client-Side Filtering: STRICT LOCATION CHECK
+                        if (!string.IsNullOrWhiteSpace(QJobLocation))
+                        {
+                            // If user asked for a location, and this job is NOT in that location, SKIP IT.
+                            if (!LocationValue.Contains(QJobLocation, StringComparison.OrdinalIgnoreCase))
+                            {
+                                _logger.LogInformation($"Skipping job '{link}' - Location '{LocationValue}' does not match requested '{QJobLocation}'");
+                                counter++;
+                                continue;
+                            }
+                        }
+
                         // 25. grab the title:
-                        var TitleElement = await page.QuerySelectorAsync("h1.job_title");
-                        string JobTitle = TitleElement != null ? await TitleElement.InnerTextAsync() : QJobName ?? "Unknown";
+                        var TitleElement = await page.QuerySelectorAsync("#job_title") 
+                                         ?? await page.QuerySelectorAsync("h1")
+                                         ?? await page.QuerySelectorAsync(".job-view-header h1");
+                                         
+                        string JobTitle = TitleElement != null ? await TitleElement.InnerTextAsync() : null;
+                        
+                        if (string.IsNullOrWhiteSpace(JobTitle))
+                        {
+                            // Fallback: If we can't find title on the page, use a generic one or try to infer from metadata
+                            _logger.LogWarning($"Could not find Job Title on page: {link}. Using Search Query Name as fallback.");
+                            JobTitle = QJobName; 
+                        }
+
                         // 26. grab the job description:
-                        var DescriptionElement = await page.QuerySelectorAsync("div.t-break") ?? await page.QuerySelectorAsync("div.job-descripton");
-                        string JobDescription = DescriptionElement != null ? await DescriptionElement.InnerTextAsync() : "description does not found";
-                        // 27. grab the job location:
-                        var LocationItem = await page.QuerySelectorAsync("ul.list.is-basic li span.t-mute");
-                        string LocationValue = LocationItem != null ? await LocationItem.InnerTextAsync() : QJobLocation ?? "Unknown";
+                        // Fix typo: job-descripton -> job-description
+                        var DescriptionElement = await page.QuerySelectorAsync("div.job-description") 
+                                               ?? await page.QuerySelectorAsync("div.t-break")
+                                               ?? await page.QuerySelectorAsync("#job_description");
+                                               
+                        string JobDescription = DescriptionElement != null ? await DescriptionElement.InnerTextAsync() : "Description not found";
+                        
                         // 28. replace the dot with comma in JobLocation value (bayt manipulation):
                         if (LocationValue.Contains("."))
                         {
@@ -177,6 +194,7 @@ namespace ScraperAPI.Services.ScraperService
                         _logger.LogError($"Failed to scrape deep link {link}: {ex.Message}");
                     }
                 }
+
             }
             catch (Exception ex)
             {

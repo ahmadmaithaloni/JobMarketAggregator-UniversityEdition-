@@ -11,6 +11,7 @@ namespace BlazorFrontend.Models
         public string UserPhone { get; set; } = string.Empty;
         public string UserMajor { get; set; } = string.Empty;
         public string UserPassword { get; set; } = string.Empty;
+        public DateTime CreationDate { get; set; }
     }
 
     public class JobQuery

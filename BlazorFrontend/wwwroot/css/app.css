@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
 :root {
     /* Light Mode - Monochrome Premium */
     --primary: #0f172a;
@@ -21,9 +23,13 @@
     --input-bg: #f8fafc;
 
     --radius: 12px;
-    --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.025);
+    --shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 
     --hero-gradient: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+
+    /* Oreo Theme Variables (Light Mode defaults) */
+    --bg-header: #0f172a;
+    --fg-header: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -52,7 +58,11 @@
         --shadow: none;
         /* Flat look for dark mode */
 
-        --hero-gradient: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        --hero-gradient: linear-gradient(135deg, #f8fafc 0%, #94a3b8 100%);
+
+        /* Header blends in Dark Mode */
+        --bg-header: #0f172a;
+        --fg-header: #f8fafc;
     }
 }
 
@@ -69,6 +79,12 @@ body.dark-mode {
     --input-bg: #1e293b;
     --shadow: none;
     --hero-gradient: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+
+    --bg-header: #0f172a;
+    --fg-header: #f8fafc;
+
+    /* Fix: Gradient must be light for text visibility in Dark Mode */
+    --hero-gradient: linear-gradient(135deg, #f8fafc 0%, #94a3b8 100%);
 }
 
 body.light-mode {
@@ -82,14 +98,18 @@ body.light-mode {
     --border: #e2e8f0;
     --input-bg: #f8fafc;
     --radius: 12px;
-    --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.025);
+    --shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
     --hero-gradient: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+
+    /* Oreo Override */
+    --bg-header: #0f172a;
+    --fg-header: #ffffff;
 }
 
 body {
     background-color: var(--bg-body);
     color: var(--text-main);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     margin: 0;
     padding-bottom: 80px;
     transition: background-color 0.3s, color 0.3s;
@@ -180,7 +200,8 @@ p {
 
 /* Header & Nav */
 .top-bar {
-    background: var(--bg-card);
+    background: var(--bg-header);
+    /* Changed from bg-card */
     padding: 1rem;
     position: sticky;
     top: 0;
@@ -189,14 +210,14 @@ p {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    backdrop-filter: blur(10px);
-    /* Glass effect */
+    /* Removed backdrop-filter to ensure solid oreo look */
 }
 
 .brand {
     font-weight: 800;
     font-size: 1.25rem;
-    color: var(--text-main);
+    color: var(--fg-header);
+    /* Changed from text-main */
     text-decoration: none;
     letter-spacing: -0.5px;
 }
@@ -206,7 +227,8 @@ p {
     bottom: 0;
     left: 0;
     right: 0;
-    background: var(--bg-card);
+    background: var(--bg-header);
+    /* Changed from bg-card */
     border-top: 1px solid var(--border);
     display: flex;
     justify-content: space-around;
@@ -219,15 +241,20 @@ p {
     display: flex;
     flex-direction: column;
     align-items: center;
-    color: var(--text-muted);
+    color: var(--fg-header);
+    /* Changed from text-muted */
+    opacity: 0.6;
+    /* Added opacity for inactive state */
     text-decoration: none;
     font-size: 0.75rem;
     font-weight: 500;
-    transition: color 0.2s;
+    transition: color 0.2s, opacity 0.2s;
 }
 
 .nav-item.active {
-    color: var(--text-main);
+    color: var(--fg-header);
+    /* Changed from text-main */
+    opacity: 1.0;
 }
 
 .nav-icon {
