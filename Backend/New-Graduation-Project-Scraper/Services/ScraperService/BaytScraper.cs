@@ -167,6 +167,40 @@ namespace ScraperAPI.Services.ScraperService
                                                
                         string JobDescription = DescriptionElement != null ? await DescriptionElement.InnerTextAsync() : "Description not found";
                         
+                        // --- New: Extract Salary and Date Posted ---
+                        string? JobSalary = "Not Specified";
+                        string? JobDatePosted = "Not Specified";
+
+                        // Try to find the list of details (usually contains Location, Company, Date, Salary)
+                        var MetaListItems = await page.QuerySelectorAllAsync("ul.list.is-basic li");
+                        // 1. Iterate through items to find keywords
+                        foreach (var metaItem in MetaListItems)
+                        {
+                            var text = await metaItem.InnerTextAsync();
+                            if (string.IsNullOrWhiteSpace(text)) continue;
+
+                            if (text.Contains("Date Posted", StringComparison.OrdinalIgnoreCase))
+                            {
+                                JobDatePosted = text.Replace("Date Posted:", "").Trim();
+                            }
+                            else if (text.Contains("Monthly Salary", StringComparison.OrdinalIgnoreCase))
+                            {
+                                JobSalary = text.Replace("Monthly Salary:", "").Trim();
+                            }
+                        }
+                        // Fallback: Check for dl/dt structure if ul list fails or for specific templates
+                        if (JobSalary == "Not Specified")
+                        {
+                            var salaryElement = await page.QuerySelectorAsync("dt:has-text('Monthly Salary') + dd");
+                            if (salaryElement != null) JobSalary = await salaryElement.InnerTextAsync();
+                        }
+                        if (JobDatePosted == "Not Specified")
+                        {
+                            var dateElement = await page.QuerySelectorAsync("dt:has-text('Date Posted') + dd");
+                            if (dateElement != null) JobDatePosted = await dateElement.InnerTextAsync();
+                        }
+                        // -------------------------------------------
+                        
                         // 28. replace the dot with comma in JobLocation value (bayt manipulation):
                         if (LocationValue.Contains("."))
                         {
@@ -179,6 +213,8 @@ namespace ScraperAPI.Services.ScraperService
                             JobUrl = link,
                             JobLocation = LocationValue.Trim(),
                             JobDescription = JobDescription.Trim(), 
+                            JobSalary = JobSalary,        // <--- New Field
+                            JobDatePosted = JobDatePosted, // <--- New Field
                             SiteId = 1,
                             IsAvailable = true,
                             QueryId = QueryID,

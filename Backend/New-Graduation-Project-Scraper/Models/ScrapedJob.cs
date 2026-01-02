@@ -29,6 +29,12 @@ public partial class ScrapedJob
 
     public string JobDescription { get; set; } = null!;
 
+    [StringLength(100)]
+    public string? JobSalary { get; set; }
+
+    [StringLength(100)]
+    public string? JobDatePosted { get; set; }
+
     [StringLength(1000)]
     public string? JobNotes { get; set; }
 

@@ -4,6 +4,7 @@ using Scalar.AspNetCore;
 using ScraperAPI.Services.LocationMapper_Service;
 using ScraperAPI.Services.ScraperService;
 using ScraperAPI.Services.Scraping_Service;
+using ScraperAPI.Models;
 using WebApplication1.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -52,5 +53,33 @@ app.UseCors("AllowAll");
 app.UseAuthorization();
 
 app.MapControllers();
+
+// --- Database Seeding ---
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<ScrapingEngineDbContext>();
+        // Ensure database is created
+        context.Database.EnsureCreated();
+
+        // Seed JobSites
+        if (!context.JobSites.Any())
+        {
+            context.JobSites.AddRange(
+                new JobSite { SiteName = "Bayt.com", SiteUrl = "https://www.bayt.com" },
+                new JobSite { SiteName = "Reed.co.uk", SiteUrl = "https://www.reed.co.uk" }
+            );
+            context.SaveChanges();
+        }
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while seeding the database.");
+    }
+}
+// ------------------------
 
 app.Run();

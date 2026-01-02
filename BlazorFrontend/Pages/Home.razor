@@ -87,61 +87,7 @@
             </div>
         }
 
-        <!-- Results Area -->
-    @if (isLoading)
-    {
-        <!-- Skeleton Loading State -->
-        <div style="margin-top: 2rem;">
-            <div class="skeleton" style="height: 1.5rem; width: 150px; margin-bottom: 1rem;"></div>
-            <div style="display: grid; gap: 1rem;">
-                @for (int i = 0; i < 3; i++)
-                {
-                    <div class="card skeleton-card">
-                        <div style="display: flex; justify-content: space-between;">
-                            <div style="width: 70%;">
-                                <div class="skeleton" style="height: 1.5rem; width: 60%; margin-bottom: 0.5rem;"></div>
-                                <div class="skeleton" style="height: 1rem; width: 40%;"></div>
-                            </div>
-                            <div class="skeleton" style="height: 2rem; width: 2rem; border-radius: 50%;"></div>
-                        </div>
-                    </div>
-                }
-            </div>
-        </div>
-    }
-    else if (jobs.Any())
-    {
-        <div>
-             <h2 style="font-size: 1.1rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 1rem;">
-                Results (@jobs.Count)
-            </h2>
-
-            <div style="display: grid; gap: 1rem;">
-                @foreach (var job in jobs)
-                {
-                    <div class="card result-card" @onclick="() => ViewJob(job)" style="cursor: pointer; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: start;">
-                            <div>
-                                <h3 style="margin: 0; color: var(--text-main); font-size: 1.1rem;">@job.JobName</h3>
-                                <div style="color: var(--text-muted); font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18" /><path d="M5 21V7l8-4 8 4v14" /><path d="M17 21v-8.5a2.5 2.5 0 0 0-5 0V21" /></svg>
-                                    <span>@job.SiteName</span>
-                                    <span>•</span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
-                                    <span>@job.JobLocation</span>
-                                </div>
-                            </div>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
-                        </div>
-                    </div>
-                }
-            </div>
-        </div>
-    }
-    else if (!isLoading && !string.IsNullOrEmpty(query.JobName)) 
-    {
-         <!-- Only show "No results" if user actually searched -->
-    }
+        <!-- Results Moved to /results Page -->
     
 }
 <div style="height: 80px;"></div>
@@ -153,7 +99,8 @@
         LowSalary = 1000, 
         HighSalary = 10000 
     };
-    private List<ScrapedJob> jobs = new List<ScrapedJob>();
+    // No need for 'jobs' list here anymore
+    // private List<ScrapedJob> jobs = new List<ScrapedJob>();
     private List<JobQuery> recentQueries = new List<JobQuery>();
     private bool isLoading = false;
     private string error = "";
@@ -164,12 +111,6 @@
         {
             Nav.NavigateTo("/");
             return;
-        }
-        
-        // Restore state if available
-        if (Api.CurrentJobList != null && Api.CurrentJobList.Any())
-        {
-            jobs = Api.CurrentJobList;
         }
         
         try 
@@ -194,8 +135,11 @@
         
         try
         {
-            jobs = await Api.SearchJobs(query);
-            recentQueries = await Api.GetMyQueries();
+            // The Service will store the results in Api.CurrentJobList
+            await Api.SearchJobs(query);
+            
+            // Navigate to the separate results page
+            Nav.NavigateTo("/results");
         }
         catch (Exception ex)
         {
@@ -209,20 +153,17 @@
 
     private async Task LoadQuery(JobQuery q)
     {
-        // 1. Pre-fill inputs
         query.JobName = q.QjobName;
         query.Location = q.QjobLocation;
         
-        // 2. Fetch jobs directly from DB
         isLoading = true;
         error = "";
         
         try
         {
-            jobs = await Api.GetJobsByQueryId(q.QueryId);
-            
-            // Optional: If no jobs found in DB (old query?), logic could trigger a new scrape here.
-            // For now, we respect the user's request to "fetch from db".
+            // Fetch jobs directly from DB into Service
+            await Api.GetJobsByQueryId(q.QueryId);
+            Nav.NavigateTo("/results");
         }
         catch (Exception ex)
         {
@@ -232,12 +173,6 @@
         {
             isLoading = false;
         }
-    }
-
-    private void ViewJob(ScrapedJob job)
-    {
-        Api.SelectedJob = job;
-        Nav.NavigateTo("/job-details");
     }
 }
 

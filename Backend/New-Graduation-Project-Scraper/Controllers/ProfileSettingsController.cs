@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using ScraperAPI.DTOs;
 using ScraperAPI.Models;
 using System.Runtime.CompilerServices;
 using WebApplication1.Models;
@@ -20,28 +21,22 @@ namespace ScraperAPI.Controllers
             _dbContext = dbContext;
         }
 
-        [HttpPost("CreateUserProfile/{UserName}/{UserAddress}/{UserEmail}/{UserPhone}/{UserMajor}/{UserPassword}")] 
-        public async Task<IActionResult> CreateUserProfile(string UserName,string UserAddress, string UserEmail, string UserPhone, string UserMajor, string UserPassword)
+        [HttpPost("CreateUserProfile")] 
+        public async Task<IActionResult> CreateUserProfile([FromBody] CreateUserProfileRequest request)
         {
-            // check if the entered user ID exists already in the db or not exist (first validation phase):
-            //var user = await _dbContext.Users.FindAsync(UserID);
-            //if (user != null || UserID<= 0) 
-            //{
-            //    _logger.LogError($"the user with id ({UserID}) is already exist or entered wrong data"); // to assign the error on the server terminal interface
-            //    return BadRequest($"the user with id ({UserID}) is already exist in the db or entered wrong data"); // to warn the frontend client
-            //}
+            
 
             // check if the name already exist or not, or if it is not entered yet (second validation phase):
-            var Nuser = _dbContext.Users.FirstOrDefault(n => n.UserName==UserName);
-            if (UserName.Length== 0 || !char.IsLetter(UserName[0]) || Nuser!=null)
+            var Nuser = _dbContext.Users.FirstOrDefault(n => n.UserName==request.UserName);
+            if (request.UserName?.Length== 0 || !char.IsLetter(request.UserName[0]) || Nuser!=null)
             {
                 _logger.LogError("the user does not entered a username or the username starts with incorrect chars (does not contain letters in the first)");
                 return BadRequest("the user does not entered a username or the username starts with incorrect chars (does not contain letters in the first)");
             }
 
             // check if the user entered password and it was so weak or even does not entered any password, (and check if the password belongs to an already exist account (checked before)):
-            var Puser = _dbContext.Users.FirstOrDefault(u => u.UserPassword==UserPassword);
-            if (UserPassword.Length == 0 || Puser!= null)
+            var Puser = _dbContext.Users.FirstOrDefault(u => u.UserPassword==request.UserPassword);
+            if (request.UserPassword.Length == 0 || Puser!= null)
             {
                 _logger.LogError("the user does not entered a password");
                 return BadRequest("the user does not entered a password");
@@ -52,7 +47,7 @@ namespace ScraperAPI.Controllers
                 int PasswordScore = 0;
 
                 // rule 1: password length:
-                if (UserPassword.Length<8)
+                if (request.UserPassword.Length<8)
                 {
                     _logger.LogError("the password is shorter than 8 chars");
                     return BadRequest("the password is shorter than 8 chars");
@@ -61,19 +56,19 @@ namespace ScraperAPI.Controllers
                 PasswordScore+=1;
 
                 // rule 2: password complexity (uppercase letters):
-                if (UserPassword.Any(char.IsUpper))
+                if (request.UserPassword.Any(char.IsUpper))
                 {
                     PasswordScore += 1;
                 }
 
                 // rule 3: use numbers in the password:
-                if (UserPassword.Any(char.IsDigit))
+                if (request.UserPassword.Any(char.IsDigit))
                 {
                     PasswordScore+=1;
                 }
 
                 // rule 4: check for using special characters (symbols):
-                if (UserPassword.Any(ch => !char.IsLetterOrDigit(ch)))
+                if (request.UserPassword.Any(ch => !char.IsLetterOrDigit(ch)))
                 {
                     PasswordScore += 1;
                 }
@@ -100,12 +95,12 @@ namespace ScraperAPI.Controllers
             var DbUser = new User
             {
                 //UserId = UserID,
-                UserName = UserName,
-                UserAddress = UserAddress,
-                UserEmail = UserEmail,
-                UserMajor = UserMajor,
-                UserPhone = UserPhone,
-                UserPassword = UserPassword,
+                UserName = request.UserName,
+                UserAddress = request.UserAddress,
+                UserEmail = request.UserEmail,
+                UserMajor = request.UserMajor,
+                UserPhone = request.UserPhone,
+                UserPassword = request.UserPassword,
                 CreationDate = DateTime.UtcNow
             };
 

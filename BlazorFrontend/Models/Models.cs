@@ -41,6 +41,8 @@ namespace BlazorFrontend.Models
         public string SiteName { get; set; } = "Job Site"; // Default
         public string JobUrl { get; set; } = string.Empty;
         public string JobDescription { get; set; } = string.Empty;
+        public string? JobSalary { get; set; }
+        public string? JobDatePosted { get; set; }
         public string JobNotes { get; set; } = string.Empty;
         public bool IsAvailable { get; set; }
         public int SiteId { get; set; }

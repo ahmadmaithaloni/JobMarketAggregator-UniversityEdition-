@@ -49,16 +49,19 @@ namespace BlazorFrontend.Services
 
         public async Task<string> Register(UserProfile profile)
         {
-            // Endpoint: /api/ProfileSettings/CreateUserProfile/...
-            var path = $"{BaseUrl}/api/ProfileSettings/CreateUserProfile/" +
-                       $"{Uri.EscapeDataString(profile.UserName)}/" +
-                       $"{Uri.EscapeDataString(profile.UserAddress)}/" +
-                       $"{Uri.EscapeDataString(profile.UserEmail)}/" +
-                       $"{Uri.EscapeDataString(profile.UserPhone)}/" +
-                       $"{Uri.EscapeDataString(profile.UserMajor)}/" +
-                       $"{Uri.EscapeDataString(profile.UserPassword)}";
-
-            var response = await _http.PostAsync(path, null);
+            // Endpoint: /api/ProfileSettings/CreateUserProfile/: UserProfile
+            var path = $"{BaseUrl}/api/ProfileSettings/CreateUserProfile/";
+            // anonymous object:
+            var RequestBody = new {
+                UserName = profile.UserName,
+                UserAddress = profile.UserAddress,
+                UserEmail = profile.UserEmail,
+                UserPhone = profile.UserPhone,
+                UserPassword = profile.UserPassword,
+                UserMajor = profile.UserMajor
+            };
+            // send the request in a request body:
+            var response = await _http.PostAsJsonAsync(path, RequestBody);
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadAsStringAsync();
         }
@@ -68,15 +71,18 @@ namespace BlazorFrontend.Services
             if (CurrentUser == null) throw new Exception("User not logged in.");
 
             // Endpoint: /api/JobQuery/CreateJobQuery/v1/...
-            var createPath = $"{BaseUrl}/api/JobQuery/CreateJobQuery/v1/{CurrentUser.UserId}/" +
-                             $"{Uri.EscapeDataString(query.JobName)}/" +
-                             $"{Uri.EscapeDataString(query.Location)}/" +
-                             $"{Uri.EscapeDataString(query.StartTime)}/" +
-                             $"{Uri.EscapeDataString(query.EndTime)}/" +
-                             $"{query.LowSalary}/" +
-                             $"{query.HighSalary}";
-
-            var createResponse = await _http.PostAsync(createPath, null);
+            var createPath = $"{BaseUrl}/api/JobQuery/CreateJobQuery/v1";
+            // anonymous object"
+            var RequestBody = new {
+                UserID = CurrentUser.UserId,
+                JobName = query.JobName,
+                JobLocation = query.Location,
+                JobStartTime = query.StartTime,
+                JobEndTime = query.EndTime,
+                JobLowSalary = query.LowSalary,
+                JobHighSalary = query.HighSalary
+            };
+            var createResponse = await _http.PostAsJsonAsync(createPath, RequestBody);
             if (!createResponse.IsSuccessStatusCode)
             {
                 var error = await createResponse.Content.ReadAsStringAsync();
@@ -89,7 +95,7 @@ namespace BlazorFrontend.Services
             
             // Use the new Optimized Single Query Endpoint
             var fetchPath = $"{BaseUrl}/api/Scraping/ScrapeSingleQuery/v1/{createdQuery.QueryId}";
-            var response = await _http.PostAsync(fetchPath, null);
+            var response = await _http.PostAsJsonAsync(fetchPath, RequestBody);
             if (response.IsSuccessStatusCode)
             {
                 var jobs = await response.Content.ReadFromJsonAsync<List<ScrapedJob>>();
@@ -108,62 +114,92 @@ namespace BlazorFrontend.Services
 
         public async Task UpdatePassword(string newPassword)
         {
-             if (CurrentUser == null) return;
-             // api/UserManagement/ChangePassword/v1/{UserID}/{UserPassword}/{UserNewPassword}
-             var path = $"{BaseUrl}/api/UserManagement/ChangePassword/v1/{CurrentUser.UserId}/{Uri.EscapeDataString(CurrentUser.UserPassword)}/{Uri.EscapeDataString(newPassword)}";
-             var res = await _http.PutAsync(path, null);
-             res.EnsureSuccessStatusCode();
-             CurrentUser.UserPassword = newPassword; // Update local state
+            if (CurrentUser == null) return;
+            // api/UserManagement/ChangePassword/v1
+            var path = $"{BaseUrl}/api/UserManagement/ChangePassword/v1";
+            var RequestBody = new {
+                UserID = CurrentUser.UserId,
+                UserPassword = CurrentUser.UserPassword,
+                UserNewPassword = newPassword
+            };
+            var res = await _http.PutAsJsonAsync(path, RequestBody);
+            res.EnsureSuccessStatusCode();
+            CurrentUser.UserPassword = newPassword; // Update local state
         }
 
         public async Task UpdateUserName(string newName)
         {
-             if (CurrentUser == null) return;
-             // api/UserManagement/ChangeUserName/v1/{UserID}/{UserPassKey}/{UserNewName}
-             var path = $"{BaseUrl}/api/UserManagement/ChangeUserName/v1/{CurrentUser.UserId}/{Uri.EscapeDataString(CurrentUser.UserPassword)}/{Uri.EscapeDataString(newName)}";
-             var res = await _http.PutAsync(path, null);
-             res.EnsureSuccessStatusCode();
-             CurrentUser.UserName = newName;
+            if (CurrentUser == null) return;
+            // api/UserManagement/ChangeUserName/v1
+            var path = $"{BaseUrl}/api/UserManagement/ChangeUserName/v1";
+            var RequestBody = new {
+                UserID = CurrentUser.UserId,
+                UserPassKey = CurrentUser.UserPassword,
+                UserNewName = newName
+            };
+            var res = await _http.PutAsJsonAsync(path, RequestBody);
+            res.EnsureSuccessStatusCode();
+            CurrentUser.UserName = newName;
         }
 
         public async Task UpdateAddress(string newAddress)
         {
-             if (CurrentUser == null) return;
-             // api/UserManagement/ChangeUserAddress/v1/{UserID}/{UserPassWord}/{UserNewAddress}
-             var path = $"{BaseUrl}/api/UserManagement/ChangeUserAddress/v1/{CurrentUser.UserId}/{Uri.EscapeDataString(CurrentUser.UserPassword)}/{Uri.EscapeDataString(newAddress)}";
-             var res = await _http.PutAsync(path, null);
-             res.EnsureSuccessStatusCode();
-             CurrentUser.UserAddress = newAddress;
+            if (CurrentUser == null) return;
+            // api/UserManagement/ChangeUserAddress/v1
+            var path = $"{BaseUrl}/api/UserManagement/ChangeUserAddress/v1";
+            var RequestBody = new {
+                UserID = CurrentUser.UserId,
+                UserPassWord = CurrentUser.UserPassword,
+                UserNewAddress = newAddress
+            };
+            var res = await _http.PutAsJsonAsync(path, RequestBody);
+            res.EnsureSuccessStatusCode();
+            CurrentUser.UserAddress = newAddress;
         }
 
         public async Task UpdateEmail(string newEmail)
         {
-             if (CurrentUser == null) return;
-             // api/UserManagement/ChangeEmailAddress/v1/{UserID}/{UserPassword}/{UserNewEmail}
-             var path = $"{BaseUrl}/api/UserManagement/ChangeEmailAddress/v1/{CurrentUser.UserId}/{Uri.EscapeDataString(CurrentUser.UserPassword)}/{Uri.EscapeDataString(newEmail)}";
-             var res = await _http.PutAsync(path, null);
-             res.EnsureSuccessStatusCode();
-             CurrentUser.UserEmail = newEmail;
+            if (CurrentUser == null) return;
+            // api/UserManagement/ChangeEmailAddress/v1
+            var path = $"{BaseUrl}/api/UserManagement/ChangeEmailAddress/v1";
+            var RequestBody = new {
+                UserID = CurrentUser.UserId,
+                UserPassword = CurrentUser.UserPassword,
+                UserNewEmail = newEmail
+            };
+            var res = await _http.PutAsJsonAsync(path, RequestBody);
+            res.EnsureSuccessStatusCode();
+            CurrentUser.UserEmail = newEmail;
         }
 
         public async Task UpdatePhone(string newPhone)
         {
-             if (CurrentUser == null) return;
-             // api/UserManagement/ChangePhone/v1/{UserID}/{UserPassword}/{UserNewPhone}
-             var path = $"{BaseUrl}/api/UserManagement/ChangePhone/v1/{CurrentUser.UserId}/{Uri.EscapeDataString(CurrentUser.UserPassword)}/{Uri.EscapeDataString(newPhone)}";
-             var res = await _http.PutAsync(path, null);
-             res.EnsureSuccessStatusCode();
-             CurrentUser.UserPhone = newPhone;
+            if (CurrentUser == null) return;
+            // api/UserManagement/ChangePhone/v1
+            var path = $"{BaseUrl}/api/UserManagement/ChangePhone/v1";
+            var RequestBody = new {
+                UserID = CurrentUser.UserId,
+                UserPassword = CurrentUser.UserPassword,
+                UserNewPhone = newPhone
+            };
+            var res = await _http.PutAsJsonAsync(path, RequestBody);
+            res.EnsureSuccessStatusCode();
+            CurrentUser.UserPhone = newPhone;
         }
 
         public async Task UpdateMajor(string newMajor)
         {
-             if (CurrentUser == null) return;
-             // api/UserManagement/ChangeMajor/v1/{UserID}/{UserPassword}/{UserNewMajor}
-             var path = $"{BaseUrl}/api/UserManagement/ChangeMajor/v1/{CurrentUser.UserId}/{Uri.EscapeDataString(CurrentUser.UserPassword)}/{Uri.EscapeDataString(newMajor)}";
-             var res = await _http.PutAsync(path, null);
-             res.EnsureSuccessStatusCode();
-             CurrentUser.UserMajor = newMajor;
+            if (CurrentUser == null) return;
+            // api/UserManagement/ChangeMajor/v1
+            var path = $"{BaseUrl}/api/UserManagement/ChangeMajor/v1";
+            var RequestBody = new {
+                UserID = CurrentUser.UserId,
+                UserPassword = CurrentUser.UserPassword,
+                UserNewMajor = newMajor
+            };
+            var res = await _http.PutAsJsonAsync(path, RequestBody);
+            res.EnsureSuccessStatusCode();
+            CurrentUser.UserMajor = newMajor;
         }
 
         // Add other update methods similarly if needed
@@ -174,8 +210,8 @@ namespace BlazorFrontend.Services
             var path = $"{BaseUrl}/api/JobQuery/GetUserQueries/v1/{CurrentUser.UserId}";
             try
             {
-                 var queries = await _http.GetFromJsonAsync<List<JobQuery>>(path);
-                 return queries ?? new List<JobQuery>();
+                var queries = await _http.GetFromJsonAsync<List<JobQuery>>(path);
+                return queries ?? new List<JobQuery>();
             }
             catch
             {
@@ -184,17 +220,17 @@ namespace BlazorFrontend.Services
         }
         public async Task<List<ScrapedJob>> GetJobsByQueryId(int queryId)
         {
-             var path = $"{BaseUrl}/api/JobQuery/GetJobsByQueryId/v1/{queryId}";
-             try 
-             {
-                 var jobs = await _http.GetFromJsonAsync<List<ScrapedJob>>(path);
-                 CurrentJobList = jobs ?? new List<ScrapedJob>();
-                 return CurrentJobList;
-             }
-             catch
-             {
-                 return new List<ScrapedJob>();
-             }
+            var path = $"{BaseUrl}/api/JobQuery/GetJobsByQueryId/v1/{queryId}";
+            try 
+            {
+                var jobs = await _http.GetFromJsonAsync<List<ScrapedJob>>(path);
+                CurrentJobList = jobs ?? new List<ScrapedJob>();
+                return CurrentJobList;
+            }
+            catch
+            {
+                return new List<ScrapedJob>();
+            }
         }
     }
 }

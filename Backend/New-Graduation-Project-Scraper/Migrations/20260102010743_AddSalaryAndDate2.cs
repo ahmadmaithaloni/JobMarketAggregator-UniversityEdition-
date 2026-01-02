@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace ScraperAPI.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class AddSalaryAndDate2 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -15,11 +15,11 @@ namespace ScraperAPI.Migrations
                 name: "JobSites",
                 columns: table => new
                 {
-                    SiteId = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    SiteUrl = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
-                    SiteName = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false, defaultValue: true)
+                    SiteId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    SiteUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    SiteName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
                 },
                 constraints: table =>
                 {
@@ -30,14 +30,14 @@ namespace ScraperAPI.Migrations
                 name: "Users",
                 columns: table => new
                 {
-                    UserId = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    UserName = table.Column<string>(type: "TEXT", maxLength: 250, nullable: false),
-                    UserAddress = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
-                    UserEmail = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    UserPhone = table.Column<string>(type: "TEXT", unicode: false, maxLength: 15, nullable: false),
-                    UserMajor = table.Column<string>(type: "TEXT", unicode: false, maxLength: 100, nullable: false),
-                    UserPassword = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
+                    UserId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    UserName = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: false),
+                    UserAddress = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    UserEmail = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    UserPhone = table.Column<string>(type: "varchar(15)", unicode: false, maxLength: 15, nullable: false),
+                    UserMajor = table.Column<string>(type: "varchar(100)", unicode: false, maxLength: 100, nullable: false),
+                    UserPassword = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
                     CreationDate = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "(getdate())")
                 },
                 constraints: table =>
@@ -49,15 +49,15 @@ namespace ScraperAPI.Migrations
                 name: "JobQueries",
                 columns: table => new
                 {
-                    QueryId = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    UserId = table.Column<int>(type: "INTEGER", nullable: false),
-                    QueryDescription = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: false),
+                    QueryId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    UserId = table.Column<int>(type: "int", nullable: false),
+                    QueryDescription = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
                     CreationDate = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "(getdate())"),
-                    QJobName = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false, defaultValue: "Software Developer"),
-                    QJobLocation = table.Column<string>(type: "TEXT", maxLength: 150, nullable: false, defaultValue: "Amman, Jordan"),
-                    QJobStartTime = table.Column<TimeOnly>(type: "TEXT", nullable: false, defaultValue: new TimeOnly(9, 0, 0)),
-                    QJobEndTime = table.Column<TimeOnly>(type: "TEXT", nullable: false, defaultValue: new TimeOnly(17, 0, 0)),
+                    QJobName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false, defaultValue: "Software Developer"),
+                    QJobLocation = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false, defaultValue: "Amman, Jordan"),
+                    QJobStartTime = table.Column<TimeOnly>(type: "time", nullable: false, defaultValue: new TimeOnly(9, 0, 0)),
+                    QJobEndTime = table.Column<TimeOnly>(type: "time", nullable: false, defaultValue: new TimeOnly(17, 0, 0)),
                     QLowSalary = table.Column<decimal>(type: "money", nullable: false),
                     QHighSalary = table.Column<decimal>(type: "money", nullable: false)
                 },
@@ -76,16 +76,18 @@ namespace ScraperAPI.Migrations
                 name: "ScrapedJobs",
                 columns: table => new
                 {
-                    JobId = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    JobName = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    JobLocation = table.Column<string>(type: "TEXT", maxLength: 250, nullable: false),
-                    JobUrl = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
-                    SiteId = table.Column<int>(type: "INTEGER", nullable: false),
-                    JobDescription = table.Column<string>(type: "TEXT", nullable: false),
-                    JobNotes = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true),
-                    IsAvailable = table.Column<bool>(type: "INTEGER", nullable: false, defaultValue: true),
-                    QueryId = table.Column<int>(type: "INTEGER", nullable: false)
+                    JobId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    JobName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    JobLocation = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: false),
+                    JobUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    SiteId = table.Column<int>(type: "int", nullable: false),
+                    JobDescription = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    JobSalary = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    JobDatePosted = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    JobNotes = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    IsAvailable = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
+                    QueryId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
