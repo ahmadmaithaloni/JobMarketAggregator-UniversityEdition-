@@ -48,6 +48,7 @@ namespace ScraperAPI.Services.ScraperService
             var page = await Context.NewPageAsync();
             // 4. create empty Jobs List to fill it up with scraped jobs & list of string job links:
             List<ScrapedJob> ScrapedJobs = new List<ScrapedJob>();
+
             List<string> JobLinks = new List<string>();
             // 5. construct the initial search url for bayt.com and navigate to it:
             string? Url = $"https://www.bayt.com/en/";
@@ -57,19 +58,35 @@ namespace ScraperAPI.Services.ScraperService
             try
             {
                 // 7. locate the job search box from bayt.com
+                // 7. locate the job search box (Keyword)
                 var SearchInput = page.Locator("input[id='text_search']").First; 
                 if (await SearchInput.CountAsync() == 0)
                 {
-                    // try another way (by placeholders):
                     SearchInput = page.GetByPlaceholder("Search jobs, skills, companies").First;
                 }
 
-                // 8. Type in the search box - Strategy: Combined "Keyword Location" for best relevance
-                string combinedQuery = string.IsNullOrWhiteSpace(QJobLocation) ? QJobName : $"{QJobName} {QJobLocation}";
-                _logger.LogInformation($"Typing combined query in search box: {combinedQuery}"); 
-                await SearchInput.FillAsync(combinedQuery);
+                // 8. Locate the Location box
+                // Strategy: Common placeholders or Name attributes for Bayt
+                var LocationInput = page.Locator("input[id='search_country']").First; // Try by ID first
+                if (await LocationInput.CountAsync() == 0)
+                {
+                    // Fallback to placeholders if ID fails
+                    LocationInput = page.GetByPlaceholder("City, country or region").First; 
+                }
+
+                // 9. Fill Inputs
+                _logger.LogInformation($"Filling Search Form: Keyword='{QJobName}', Location='{QJobLocation}'");
                 
-                // 9. Submit Search
+                await SearchInput.FillAsync(QJobName);
+
+                if (!string.IsNullOrWhiteSpace(QJobLocation) && await LocationInput.CountAsync() > 0)
+                {
+                    await LocationInput.FillAsync(QJobLocation);
+                    // Sometimes dropdowns appear, pressing Tab helps close them or select top match
+                    await LocationInput.PressAsync("Tab"); 
+                }
+                
+                // 10. Submit Search
                 _logger.LogInformation("Submitting search...");
                 await SearchInput.PressAsync("Enter");
                 
@@ -84,35 +101,83 @@ namespace ScraperAPI.Services.ScraperService
                 {
                     _logger.LogWarning("Timeout waiting for results selector. Page might have loaded differently.");
                 } 
-                // 17. scroll to trigger lazy loading:
-                for (int i = 0; i < 5; i++)
+                // 17. Pagination Loop
+                int pagesScraped = 0;
+                int maxPages = 2; // User requested limit
+                bool hasNextPage = true;
+
+                while (hasNextPage && pagesScraped < maxPages)
                 {
+                    pagesScraped++;
+                    _logger.LogInformation($"Scraping page {pagesScraped}...");
+
+                    // Scroll to trigger any lazy loading
                     await page.Mouse.WheelAsync(0, 3000);
-                    await Task.Delay(1500); 
-                }
-                // 18. select the jobs collection as array of objects with backup step:
-                var ListItems = await page.QuerySelectorAllAsync("li.has-pointer-d");
-                var CardItems = await page.QuerySelectorAllAsync("div.card"); // the backup
-                var AllItems = ListItems.Concat(CardItems).ToList();
-                _logger.LogInformation($"found ({AllItems.Count}) potintail jobs from bayt.com site");
-                foreach (var item in AllItems)
-                {
-                    // 19. identify the link:
-                    var TitleElement = await item.QuerySelectorAsync("h2 a") ?? await item.QuerySelectorAsync("a.jb-title");
-                    if (TitleElement != null)
+                    await Task.Delay(1000);
+
+                    // Collect Jobs from Current Page
+                    var ListItems = await page.QuerySelectorAllAsync("li.has-pointer-d");
+                    var CardItems = await page.QuerySelectorAllAsync("div.card[data-js-job-id]"); // Improved selector
+                    var AllItems = ListItems.Concat(CardItems).ToList();
+
+                    _logger.LogInformation($"Found ({AllItems.Count}) potential jobs on page {pagesScraped}");
+
+                    foreach (var item in AllItems)
                     {
-                        // 20. fetch the job links:
-                        string? Href = await TitleElement.GetAttributeAsync("href");
-                        if (!string.IsNullOrEmpty(Href))
+                        var TitleElement = await item.QuerySelectorAsync("h2 a") ?? await item.QuerySelectorAsync("a.jb-title");
+                        if (TitleElement != null)
                         {
-                            string FullUrl = Href.StartsWith("http") ? Href : "https://www.bayt.com" + Href;
-                            // avoid duplicates:
-                            if (!JobLinks.Contains(FullUrl)) 
+                            string? Href = await TitleElement.GetAttributeAsync("href");
+                            if (!string.IsNullOrEmpty(Href))
                             {
-                                // 21. add the link to the links list:
-                                JobLinks.Add(FullUrl);
+                                string FullUrl = Href.StartsWith("http") ? Href : "https://www.bayt.com" + Href;
+                                if (!JobLinks.Contains(FullUrl))
+                                {
+                                    JobLinks.Add(FullUrl);
+                                }
                             }
                         }
+                    }
+
+                    // Check for Next Button
+                    // Bayt usually has a pagination section at the bottom
+                    // Selector might be: a.pagination-next or similar. 
+                    // Let's look for a generic "next" link or specific class.
+                    var nextButton = await page.QuerySelectorAsync("a[data-js-id='pagination-next']"); 
+                    
+                    // Fallback selectors if ID changes
+                    if (nextButton == null) nextButton = await page.QuerySelectorAsync("a.js-pagination-next");
+                    if (nextButton == null) nextButton = await page.QuerySelectorAsync("li.pagination-next a");
+
+                    if (nextButton != null && await nextButton.IsVisibleAsync())
+                    {
+                        string nextUrl = await nextButton.GetAttributeAsync("href");
+                        if (!string.IsNullOrEmpty(nextUrl) && nextUrl != "#")
+                        {
+                            try 
+                            {
+                                _logger.LogInformation("Navigating to next page...");
+                                // Force click to bypass potential overlays/loaders
+                                // FIX: Use ElementHandleClickOptions instead of LocatorClickOptions because nextButton is IElementHandle
+                                await nextButton.ClickAsync(new ElementHandleClickOptions { Force = true, Timeout = 5000 });
+                                await page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
+                                await Task.Delay(2000); // Wait for results to render
+                            }
+                            catch (Exception navEx)
+                            {
+                                _logger.LogWarning($"Pagination navigation failed: {navEx.Message}. Stopping pagination.");
+                                hasNextPage = false;
+                            }
+                        }
+                        else
+                        {
+                            hasNextPage = false;
+                        }
+                    }
+                    else
+                    {
+                        hasNextPage = false;
+                        _logger.LogInformation("No next page found.");
                     }
                 }
                 _logger.LogInformation($"phase 1 complete: collected ({JobLinks.Count}) unique job links.");
@@ -127,50 +192,42 @@ namespace ScraperAPI.Services.ScraperService
                         // 24. visit the link:
                         await page.GotoAsync(link);
                         await page.WaitForLoadStateAsync(LoadState.DOMContentLoaded); // dynamic timer to wait the content
-                        
                         // 27. grab the job location early to validate:
                         var LocationItem = await page.QuerySelectorAsync("ul.list.is-basic li span.t-mute")
                                          ?? await page.QuerySelectorAsync(".job-detail-header .t-mute");
                         string LocationValue = LocationItem != null ? await LocationItem.InnerTextAsync() : "Unknown";
-                        
                         // Client-Side Filtering: STRICT LOCATION CHECK
-                        if (!string.IsNullOrWhiteSpace(QJobLocation))
-                        {
-                            // If user asked for a location, and this job is NOT in that location, SKIP IT.
-                            if (!LocationValue.Contains(QJobLocation, StringComparison.OrdinalIgnoreCase))
-                            {
-                                _logger.LogInformation($"Skipping job '{link}' - Location '{LocationValue}' does not match requested '{QJobLocation}'");
-                                counter++;
-                                continue;
-                            }
-                        }
-
+                        // if (!string.IsNullOrWhiteSpace(QJobLocation))
+                        // {
+                        //     // If user asked for a location, and this job is NOT in that location, SKIP IT.
+                        //     if (!LocationValue.Contains(QJobLocation, StringComparison.OrdinalIgnoreCase))
+                        //     {
+                        //         _logger.LogInformation($"Skipping job '{link}' - Location '{LocationValue}' does not match requested '{QJobLocation}'");
+                        //         counter++;
+                        //         continue;
+                        //     }
+                        // }
                         // 25. grab the title:
                         var TitleElement = await page.QuerySelectorAsync("#job_title") 
                                          ?? await page.QuerySelectorAsync("h1")
                                          ?? await page.QuerySelectorAsync(".job-view-header h1");
                                          
                         string JobTitle = TitleElement != null ? await TitleElement.InnerTextAsync() : null;
-                        
                         if (string.IsNullOrWhiteSpace(JobTitle))
                         {
                             // Fallback: If we can't find title on the page, use a generic one or try to infer from metadata
                             _logger.LogWarning($"Could not find Job Title on page: {link}. Using Search Query Name as fallback.");
                             JobTitle = QJobName; 
                         }
-
                         // 26. grab the job description:
                         // Fix typo: job-descripton -> job-description
                         var DescriptionElement = await page.QuerySelectorAsync("div.job-description") 
                                                ?? await page.QuerySelectorAsync("div.t-break")
-                                               ?? await page.QuerySelectorAsync("#job_description");
-                                               
+                                               ?? await page.QuerySelectorAsync("#job_description");  
                         string JobDescription = DescriptionElement != null ? await DescriptionElement.InnerTextAsync() : "Description not found";
-                        
                         // --- New: Extract Salary and Date Posted ---
                         string? JobSalary = "Not Specified";
                         string? JobDatePosted = "Not Specified";
-
                         // Try to find the list of details (usually contains Location, Company, Date, Salary)
                         var MetaListItems = await page.QuerySelectorAllAsync("ul.list.is-basic li");
                         // 1. Iterate through items to find keywords
@@ -199,23 +256,20 @@ namespace ScraperAPI.Services.ScraperService
                             var dateElement = await page.QuerySelectorAsync("dt:has-text('Date Posted') + dd");
                             if (dateElement != null) JobDatePosted = await dateElement.InnerTextAsync();
                         }
-                        // -------------------------------------------
-                        
                         // 28. replace the dot with comma in JobLocation value (bayt manipulation):
                         if (LocationValue.Contains("."))
                         {
                             LocationValue = LocationValue.Replace(".", ",").Trim();
                         }
-                        // 29. add the job to the scraped jobs list:
                         ScrapedJobs.Add(new ScrapedJob
                         {
                             JobName = JobTitle.Trim(),
                             JobUrl = link,
                             JobLocation = LocationValue.Trim(),
                             JobDescription = JobDescription.Trim(), 
-                            JobSalary = JobSalary,        // <--- New Field
-                            JobDatePosted = JobDatePosted, // <--- New Field
-                            SiteId = 1,
+                            JobSalary = JobSalary,
+                            JobDatePosted = JobDatePosted,
+                            SiteId = 1, // RE-VERIFY: Seeding MUST ensure ID 1 is Bayt.
                             IsAvailable = true,
                             QueryId = QueryID,
                             JobNotes = "Deep Scraped: Full Details Fetched from Bayt.com site"
@@ -223,14 +277,12 @@ namespace ScraperAPI.Services.ScraperService
                         // 30. update the counter and add delay:
                         counter++;
                         await Task.Delay(900); // the delay can be change to access more links in less time 
-                        
                     }
                     catch (Exception ex)
                     {
                         _logger.LogError($"Failed to scrape deep link {link}: {ex.Message}");
                     }
                 }
-
             }
             catch (Exception ex)
             {

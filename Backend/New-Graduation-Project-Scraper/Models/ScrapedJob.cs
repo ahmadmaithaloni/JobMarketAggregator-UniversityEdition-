@@ -43,10 +43,12 @@ public partial class ScrapedJob
     [JsonIgnore] // prevent the circle 
     public int QueryId { get; set; }
 
+    [JsonIgnore]
     [ForeignKey("QueryId")]
     [InverseProperty("ScrapedJobs")]
     public virtual JobQuery Query { get; set; } = null!;
 
+    [JsonIgnore]
     [ForeignKey("SiteId")]
     [InverseProperty("ScrapedJobs")]
     public virtual JobSite Site { get; set; } = null!;

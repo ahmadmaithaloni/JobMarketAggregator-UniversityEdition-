@@ -1,99 +1,198 @@
 @page "/register"
 @inject ApiService Api
 @inject NavigationManager Nav
+@using System.Text.RegularExpressions
 
-<div class="container fade-in">
-    <div class="card" style="max-width: 500px; margin: 2rem auto;">
-        <h2 style="text-align: center; margin-bottom: 1.5rem; color: var(--primary-color);">Create Account</h2>
+<style>
+    .is-invalid {
+        border-color: #ef4444 !important;
+        background-color: rgba(239, 68, 68, 0.05) !important;
+    }
+    .invalid-feedback {
+        color: #ef4444;
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+        margin-left: 2px;
+    }
+</style>
+
+<div class="container fade-in" style="width: 90%; max-width: 500px; padding-top: 4vh; margin: 0 auto; padding-bottom: 4rem;">
+    <div class="card" style="padding: 2.5rem; border: 1px solid var(--border); background: var(--bg-card); box-shadow: var(--shadow);">
         
-        <div class="input-group">
-            <span class="input-label">Username</span>
-            <input @bind="profile.UserName" class="form-control" />
-        </div>
-
-        <div class="input-group">
-            <span class="input-label">Email</span>
-            <input @bind="profile.UserEmail" class="form-control" type="email" />
-        </div>
-
-        <div class="input-group">
-            <span class="input-label">Password (Min 8 chars, 1 Uppercase, 1 Digit, 1 Symbol)</span>
-            <input @bind="profile.UserPassword" class="form-control" type="password" />
-        </div>
-
-        <div class="input-group">
-            <span class="input-label">Phone (077/078/079 + 7 digits)</span>
-            <input @bind="profile.UserPhone" class="form-control" placeholder="079xxxxxxx" />
-        </div>
-
-        <div class="input-group">
-            <span class="input-label">Major</span>
-            <input @bind="profile.UserMajor" class="form-control" />
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <h1 style="font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 2rem; margin-bottom: 0.5rem; background: var(--hero-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2;">
+                Join the<br>Network
+            </h1>
+            <p style="font-size: 1rem; color: var(--text-muted);">
+                Create your profile to start aggregating opportunities.
+            </p>
         </div>
         
-        <div class="input-group">
-            <span class="input-label">Address</span>
-            <input @bind="profile.UserAddress" class="form-control" />
+        <!-- Form -->
+        <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+            
+            <div class="input-group">
+                <label class="input-label" style="margin-left: 2px;">Username <span style="color: #ef4444;">*</span></label>
+                <input @bind="profile.UserName" class="form-control @(Errors.ContainsKey("UserName") ? "is-invalid" : "")" placeholder="johndoe" style="padding: 0.9rem;" />
+                @if (Errors.ContainsKey("UserName")) { <div class="invalid-feedback">@Errors["UserName"]</div> }
+            </div>
+
+            <div class="input-group">
+                <label class="input-label" style="margin-left: 2px;">Email Address <span style="color: #ef4444;">*</span></label>
+                <input @bind="profile.UserEmail" class="form-control @(Errors.ContainsKey("UserEmail") ? "is-invalid" : "")" type="email" placeholder="name@company.com" style="padding: 0.9rem;" />
+                 @if (Errors.ContainsKey("UserEmail")) { <div class="invalid-feedback">@Errors["UserEmail"]</div> }
+            </div>
+
+            <div class="input-group">
+                <label class="input-label" style="margin-left: 2px;">Password <span style="color: #ef4444;">*</span></label>
+                <div style="position: relative;">
+                    <input @bind="profile.UserPassword" class="form-control @(Errors.ContainsKey("UserPassword") ? "is-invalid" : "")" type="@(showPassword ? "text" : "password")" placeholder="Min 8 chars, 1 Upper, 1 Digit" style="padding: 0.9rem; padding-right: 2.5rem;" />
+                    <button type="button" @onclick="() => showPassword = !showPassword" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center;">
+                        @if (showPassword)
+                        {
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                        }
+                        else
+                        {
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        }
+                    </button>
+                </div>
+                 @if (Errors.ContainsKey("UserPassword")) { <div class="invalid-feedback">@Errors["UserPassword"]</div> }
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="input-group">
+                    <label class="input-label" style="margin-left: 2px;">Phone Number <span style="color: var(--text-muted); font-size: 0.8em; font-weight: 400;">(Optional)</span></label>
+                    <input @bind="profile.UserPhone" class="form-control @(Errors.ContainsKey("UserPhone") ? "is-invalid" : "")" placeholder="079xxxxxxx" style="padding: 0.9rem;" />
+                     @if (Errors.ContainsKey("UserPhone")) { <div class="invalid-feedback">@Errors["UserPhone"]</div> }
+                </div>
+                <div class="input-group">
+                    <label class="input-label" style="margin-left: 2px;">Major <span style="color: var(--text-muted); font-size: 0.8em; font-weight: 400;">(Optional)</span></label>
+                    <input @bind="profile.UserMajor" class="form-control @(Errors.ContainsKey("UserMajor") ? "is-invalid" : "")" placeholder="Computer Science" style="padding: 0.9rem;" />
+                     @if (Errors.ContainsKey("UserMajor")) { <div class="invalid-feedback">@Errors["UserMajor"]</div> }
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label class="input-label" style="margin-left: 2px;">Address <span style="color: var(--text-muted); font-size: 0.8em; font-weight: 400;">(Optional)</span></label>
+                <input @bind="profile.UserAddress" class="form-control" placeholder="City, Country" style="padding: 0.9rem;" />
+            </div>
+        
         </div>
 
-        @if (!string.IsNullOrEmpty(error))
+        @if (!string.IsNullOrEmpty(GlobalError))
         {
-            <div style="color: #ef4444; font-size: 0.9rem; margin-bottom: 1rem; text-align: center;">
-                @error
+            <div style="margin-top: 1.5rem; background-color: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444; font-size: 0.9rem; padding: 0.75rem; border-radius: var(--radius); text-align: center;">
+                @GlobalError
             </div>
         }
         
         @if (!string.IsNullOrEmpty(success))
         {
-            <div style="color: #166534; font-size: 0.9rem; margin-bottom: 1rem; text-align: center;">
+            <div style="margin-top: 1.5rem; background-color: rgba(22, 163, 74, 0.1); border: 1px solid #16a34a; color: #16a34a; font-size: 0.9rem; padding: 0.75rem; border-radius: var(--radius); text-align: center;">
                 @success
             </div>
         }
 
-        <button class="btn btn-primary" @onclick="HandleRegister" disabled="@isLoading">
-            @(isLoading ? "Creating Account..." : "Sign Up")
+        <button class="btn btn-primary" @onclick="HandleRegister" disabled="@isLoading" style="width: 100%; padding: 1rem; margin-top: 2rem; font-size: 1rem; letter-spacing: 0.5px;">
+            @(isLoading ? "Creating Account..." : "Create Account")
         </button>
-        
-         <div style="text-align: center; margin-top: 1rem; font-size: 0.9rem;">
+
+        <div style="text-align: center; margin-top: 1.5rem; font-size: 0.95rem;">
             <span style="color: var(--text-muted);">Already have an account? </span>
-            <a href="/" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">Sign In</a>
+            <a href="/" style="color: var(--primary-color); text-decoration: none; font-weight: 700; border-bottom: 1px solid transparent; transition: border-color 0.2s;">Sign In</a>
         </div>
     </div>
 </div>
 
 @code {
     private UserProfile profile = new UserProfile();
-    private string error = "";
+    private Dictionary<string, string> Errors = new Dictionary<string, string>();
+    private string GlobalError = "";
     private string success = "";
     private bool isLoading = false;
+    private bool showPassword = false;
 
     private async Task HandleRegister()
     {
-        isLoading = true;
-        error = "";
+        isLoading = true; 
+        GlobalError = ""; 
         success = "";
+        Errors.Clear();
 
         try
         {
-            // Basic validation
-            if (string.IsNullOrEmpty(profile.UserName) || string.IsNullOrEmpty(profile.UserPassword)) 
+            bool isValid = true;
+
+            // 1. Username
+            if (string.IsNullOrWhiteSpace(profile.UserName)) 
             {
-                error = "Username and Password are required.";
-                return;
+                Errors["UserName"] = "Username is required.";
+                isValid = false;
+            }
+            else if (!char.IsLetter(profile.UserName[0]))
+            {
+                Errors["UserName"] = "Must start with a letter.";
+                isValid = false;
             }
 
+            // 2. Email
+            if (string.IsNullOrWhiteSpace(profile.UserEmail))
+            {
+                Errors["UserEmail"] = "Email is required.";
+                isValid = false;
+            }
+            else if (!Regex.IsMatch(profile.UserEmail, @"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$"))
+            {
+                Errors["UserEmail"] = "Invalid email format.";
+                isValid = false;
+            }
+
+            // 3. Password
+            if (string.IsNullOrWhiteSpace(profile.UserPassword))
+            {
+                 Errors["UserPassword"] = "Password is required.";
+                 isValid = false;
+            }
+            else if (!Regex.IsMatch(profile.UserPassword, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$"))
+            {
+                Errors["UserPassword"] = "Must contain 8+ chars, Upper, Lower, Digit, & Symbol.";
+                isValid = false;
+            }
+
+            // 4. Phone
+            if (!string.IsNullOrWhiteSpace(profile.UserPhone) && !Regex.IsMatch(profile.UserPhone, @"^07[789]\d{7}$"))
+            {
+                Errors["UserPhone"] = "Must be 10 digits (077/078/079...).";
+                isValid = false;
+            }
+
+            // 5. Major
+            if (!string.IsNullOrWhiteSpace(profile.UserMajor) && !Regex.IsMatch(profile.UserMajor, @"^[a-zA-Z\s\-\(\)]+$"))
+            {
+                Errors["UserMajor"] = "Must contain only letters.";
+                isValid = false;
+            }
+
+            if (!isValid) return;
+
             await Api.Register(profile);
-            success = "Account created! Redirecting to login...";
+            success = "Account created! Redirecting...";
             await Task.Delay(2000);
             Nav.NavigateTo("/");
         }
-        catch (Exception ex)
-        {
-            error = ex.Message;
+        catch (Exception ex) 
+        { 
+            // Attempt to map backend errors to fields
+            var msg = ex.Message.ToLower();
+            if (msg.Contains("email")) Errors["UserEmail"] = ex.Message;
+            else if (msg.Contains("username")) Errors["UserName"] = ex.Message;
+            else if (msg.Contains("password")) Errors["UserPassword"] = ex.Message;
+            else if (msg.Contains("phone")) Errors["UserPhone"] = ex.Message;
+            else if (msg.Contains("major")) Errors["UserMajor"] = ex.Message;
+            else GlobalError = ex.Message;
         }
-        finally
-        {
-            isLoading = false;
-        }
+        finally { isLoading = false; }
     }
 }

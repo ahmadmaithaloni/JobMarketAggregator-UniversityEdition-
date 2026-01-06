@@ -3,16 +3,25 @@
 @inject NavigationManager Nav
 @using System.Text.RegularExpressions
 
-<div class="container fade-in">
-    <!-- Header with Back Button & Filter Toggle -->
-    <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-bottom: 2rem; gap: 1rem;">
+<div class="container fade-in" style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
+    
+    <!-- Header -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem;">
         <div style="display: flex; align-items: center; gap: 1rem;">
-            <button class="btn" @onclick="GoHome" style="padding: 0.5rem 1rem; border: 1px solid var(--border); background: var(--bg-card); display: flex; align-items: center; gap: 0.5rem; transition: transform 0.2s;">
-                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
-                Back
+             <button class="btn" @onclick="GoHome" style="padding: 0.5rem 1rem; border: 1px solid var(--border); background: var(--bg-card); display: flex; align-items: center; gap: 0.5rem; color: var(--text-main); transition: 0.2s;">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+                 Back
             </button>
-            <h2 style="margin: 0; font-size: 1.5rem; font-weight: 700;">Search Results</h2>
-            <span style="color: var(--text-muted);">(@FilteredJobs.Count() found)</span>
+            <div>
+                <h2 style="margin: 0; font-size: 1.8rem; font-weight: 700; color: var(--text-main);">
+                    Job Results 
+                    @if(!string.IsNullOrEmpty(Api.CurrentQuery.QjobName)) 
+                    { <span style="font-weight: 400; opacity: 0.7;">for "@Api.CurrentQuery.QjobName"</span> }
+                </h2>
+                <div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem;">
+                    Found @DisplayedJobs.Count() jobs
+                </div>
+            </div>
         </div>
         
         <button class="btn" @onclick="ToggleFilters" style="background: @(ShowFilters ? "var(--primary)" : "var(--bg-card)"); color: @(ShowFilters ? "white" : "var(--text-main)"); border: 1px solid var(--border); padding: 0.5rem 1rem; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s;">
@@ -21,122 +30,160 @@
         </button>
     </div>
 
-    <!-- Collapsible Filter Section -->
-    @if (ShowFilters)
-    {
-        <div class="card fade-in" style="padding: 1.5rem; margin-bottom: 2rem; border-top: 4px solid var(--primary); background: var(--bg-surface); animation: slideDown 0.3s ease-out;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
-                <h3 style="margin: 0; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted);">Refine Results</h3>
-                <button @onclick="ResetFilters" style="background: none; border: none; font-size: 0.85rem; color: var(--primary); cursor: pointer; text-decoration: underline;">Reset All</button>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
-                
-                <!-- Salary Filter -->
-                <div>
-                    <label class="input-label" style="margin-bottom: 0.5rem; display: block;">Minimum Salary (JOD)</label>
-                    <div style="position: relative;">
-                        <input type="number" @bind="MinSalaryFilter" @bind:event="oninput" class="form-control" placeholder="e.g. 500" style="padding-left: 2.5rem;" />
-                         <span style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-weight: bold;">$</span>
-                    </div>
-                    <div style="margin-top: 0.75rem;">
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.9rem; user-select: none;">
-                            <input type="checkbox" @bind="IncludeUnknownSalary" style="width: 1rem; height: 1rem; accent-color: var(--primary);" />
-                            Include "Unknown/Confidential"
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Date Filter -->
-                <div>
-                     <label class="input-label" style="margin-bottom: 0.5rem; display: block;">Date Posted</label>
-                    <select @bind="DateFilter" class="form-control" style="cursor: pointer;">
-                        <option value="All">Any Time</option>
-                        <option value="Today">Past 24 Hours</option>
-                        <option value="Week">Past Week</option>
-                        <option value="Month">Past Month</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-    }
-
-    <!-- Results Grid -->
-    @if (isLoading)
-    {
-         <div style="text-align: center; padding: 3rem;">
-             <div class="spinner" style="margin: 0 auto 1rem; width: 40px; height: 40px; border: 4px solid var(--bg-surface); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-             <p style="color: var(--text-muted);">Loading jobs...</p>
-         </div>
-         <style> at-keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } </style>
-    }
-    else if (!FilteredJobs.Any())
-    {
-        <div style="text-align: center; padding: 4rem; color: var(--text-muted); background: var(--bg-surface); border-radius: 12px; border: 1px dashed var(--border);">
-            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.5; margin-bottom: 1rem;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <p style="font-size: 1.1rem; margin-bottom: 1rem;">No jobs match your filters.</p>
-            @if(ShowFilters) {
-                <button class="btn btn-primary" @onclick="ResetFilters">Clear Filters</button>
-            }
-        </div>
-    }
-    else
-    {
-        <div style="display: grid; gap: 1rem;">
-            @foreach (var job in FilteredJobs)
+    <!-- Main Grid Layout (Content + Sidebar) -->
+    <!-- Dynamic Columns: If Filters OFF -> 1fr, if ON -> 1fr 300px -->
+    <div style="display: grid; grid-template-columns: @(ShowFilters ? "1fr 300px" : "1fr"); gap: 2rem; align-items: start; transition: grid-template-columns 0.3s ease;">
+        
+        <!-- Left Column: Job Cards -->
+        <div>
+            @if (isLoading)
             {
-                <div class="card result-card" @onclick="() => ViewJob(job)" style="cursor: pointer; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; transition: transform 0.2s, box-shadow 0.2s; border: 1px solid transparent;">
-                    <div style="display: flex; justify-content: space-between; align-items: start;">
-                        <div style="flex: 1;">
-                            <h3 style="margin: 0; color: var(--text-main); font-size: 1.1rem; font-weight: 600; line-height: 1.4;">@job.JobName</h3>
-                            
-                            <div style="margin-top: 0.5rem; display: flex; flex-wrap: wrap; gap: 0.5rem; row-gap: 0.5rem;">
-                                 <span style="font-size: 0.8rem; padding: 0.25rem 0.5rem; background: rgba(59, 130, 246, 0.1); color: var(--primary); border-radius: 4px; font-weight: 500;">
-                                     @job.SiteName
-                                 </span>
-                                 <span style="font-size: 0.8rem; padding: 0.25rem 0.5rem; background: var(--bg-surface); color: var(--text-muted); border-radius: 4px; border: 1px solid var(--border);">
-                                     📍 @job.JobLocation
-                                 </span>
-                                 
-                                @if (!string.IsNullOrEmpty(job.JobSalary) && job.JobSalary != "Not Specified")
-                                {
-                                     <span style="font-size: 0.8rem; padding: 0.25rem 0.5rem; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 4px; border: 1px solid rgba(16, 185, 129, 0.2);">
-                                         💰 @job.JobSalary
-                                     </span>
-                                }
-                                @if (!string.IsNullOrEmpty(job.JobDatePosted) && job.JobDatePosted != "Not Specified")
-                                {
-                                     <span style="font-size: 0.8rem; padding: 0.25rem 0.5rem; background: var(--bg-surface); color: var(--text-muted); border-radius: 4px; border: 1px solid var(--border);">
-                                         📅 @job.JobDatePosted
-                                     </span>
-                                }
+                <div style="text-align: center; padding: 4rem;">
+                    <div class="spinner"></div>
+                    <p style="color: var(--text-muted); margin-top: 1rem;">Searching best jobs for you...</p>
+                </div>
+            }
+            else if (!DisplayedJobs.Any())
+            {
+                 <div style="text-align: center; padding: 4rem; background: var(--bg-card); border-radius: 12px; border: 1px dashed var(--border);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.4; margin-bottom: 1.5rem;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <h3 style="color: var(--text-main); margin-bottom: 0.5rem;">No matches found</h3>
+                    <p style="color: var(--text-muted);">Try adjusting your filters or search for a broader term.</p>
+                 </div>
+            }
+            else
+            {
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    @foreach (var job in DisplayedJobs)
+                    {
+                        <div class="card result-card" @onclick="() => ViewJob(job)" style="cursor: pointer; padding: 1.5rem; transition: transform 0.2s, box-shadow 0.2s; border: 1px solid var(--border); background: var(--bg-card);">
+                            <div style="display: flex; justify-content: space-between; align-items: start;">
+                                <div>
+                                    <h3 style="margin: 0 0 0.75rem 0; color: var(--primary); font-size: 1.25rem; font-weight: 600;">@job.JobName</h3>
+                                    
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; color: var(--text-muted); font-size: 0.9rem;">
+                                         <span style="display: flex; align-items: center; gap: 0.4rem;">
+                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                                             @job.SiteName
+                                         </span>
+                                         <span style="width: 4px; height: 4px; background: var(--border); border-radius: 50%;"></span>
+                                         <span style="display: flex; align-items: center; gap: 0.4rem;">
+                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                             @job.JobLocation
+                                         </span>
+                                        @if (!string.IsNullOrEmpty(job.JobDatePosted) && job.JobDatePosted != "Not Specified")
+                                        {
+                                            <span style="width: 4px; height: 4px; background: var(--border); border-radius: 50%;"></span>
+                                            <span style="display: flex; align-items: center; gap: 0.4rem;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                                @job.JobDatePosted
+                                            </span>
+                                        }
+                                    </div>
+
+                                    @if (!string.IsNullOrEmpty(job.JobSalary) && job.JobSalary != "Not Specified")
+                                    {
+                                        <div style="margin-top: 1rem; display: inline-block; padding: 0.25rem 0.75rem; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 20px; font-size: 0.85rem; font-weight: 500;">
+                                            💰 @job.JobSalary
+                                        </div>
+                                    }
+                                </div>
+                                
+                                <button class="btn" style="background: var(--bg-surface); padding: 0.5rem; border-radius: 50%; color: var(--text-muted);">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+                                </button>
                             </div>
                         </div>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 1rem;"><polyline points="9 18 15 12 9 6" /></svg>
-                    </div>
+                    }
                 </div>
             }
         </div>
-    }
-    
-    <div style="height: 50px;"></div>
+
+        <!-- Right Sidebar: Filters -->
+        @if (ShowFilters)
+        {
+            <div class="card" style="position: sticky; top: 2rem; padding: 1.5rem; background: var(--bg-card); border-left: 4px solid var(--primary); animation: slideLeft 0.3s ease-out;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border);">
+                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700;">Filters</h3>
+                    <button @onclick="ResetFilters" style="background: none; border: none; font-size: 0.85rem; color: var(--primary); cursor: pointer;">Reset</button>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                    
+                    <!-- 1. Location Filter (Conditional) -->
+                    @if (string.IsNullOrWhiteSpace(Api.CurrentQuery.QjobLocation))
+                    {
+                        <div class="filter-group fade-in">
+                            <label class="input-label" style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600;">Location</label>
+                            <input type="text" @bind="LocationFilter" class="form-control" placeholder="Filter by city..." style="width: 100%; padding: 0.6rem;" />
+                            <small style="color: var(--text-muted); font-size: 0.8rem;">Refine results locally</small>
+                        </div>
+                    }
+
+                    <!-- 2. Date Filter -->
+                    <div class="filter-group">
+                        <label class="input-label" style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600;">Date Posted</label>
+                        <select @bind="DateFilter" class="form-control" style="width: 100%; padding: 0.6rem; cursor: pointer;">
+                            <option value="All">Any Time</option>
+                            <option value="Today">Past 24 Hours</option>
+                            <option value="Week">Past Week</option>
+                            <option value="Month">Past Month</option>
+                        </select>
+                    </div>
+
+                    <!-- 3. Salary Filter -->
+                    <div class="filter-group">
+                        <label class="input-label" style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600;">Min. Salary</label>
+                        <div style="position: relative;">
+                            <span style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);">$</span>
+                            <input type="number" @bind="MinSalaryFilter" class="form-control" placeholder="0" style="padding-left: 2rem; width: 100%;" />
+                        </div>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; cursor: pointer; font-size: 0.85rem; color: var(--text-muted);">
+                            <input type="checkbox" @bind="IncludeUnknownSalary" style="accent-color: var(--primary);" />
+                            Include "Unknown"
+                        </label>
+                    </div>
+
+                    <!-- Apply Button -->
+                    <button class="btn btn-primary" @onclick="ApplyFilters" style="width: 100%; padding: 0.75rem; justify-content: center; margin-top: 1rem;">
+                        Submit Filters
+                    </button>
+
+                </div>
+            </div>
+        }
+
+    </div>
 </div>
 
 <style>
-    at-keyframes slideDown {
-        from { opacity: 0; transform: translateY(-10px); }
-        to { opacity: 1; transform: translateY(0); }
+    .result-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        border-color: var(--primary) !important;
     }
+    .spinner {
+        width: 40px; height: 40px; 
+        border: 4px solid var(--bg-surface); 
+        border-top-color: var(--primary); 
+        border-radius: 50%; 
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+    }
+    at-keyframes spin { 100% { transform: rotate(360deg); } }
+    at-keyframes slideLeft { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
 </style>
 
 @code {
     private bool isLoading = false;
     private List<ScrapedJob> allJobs = new List<ScrapedJob>();
+    private List<ScrapedJob> DisplayedJobs = new List<ScrapedJob>(); // Result of filtering
 
     // UI States
-    private bool ShowFilters { get; set; } = false;
+    private bool ShowFilters { get; set; } = true; // Default open for UX, user can toggle
 
     // Filter States
+    private string LocationFilter { get; set; } = "";
     private int MinSalaryFilter { get; set; } = 0;
     private bool IncludeUnknownSalary { get; set; } = true;
     private string DateFilter { get; set; } = "All";
@@ -153,18 +200,13 @@
         if (Api.CurrentJobList != null)
         {
             allJobs = Api.CurrentJobList;
+            DisplayedJobs = new List<ScrapedJob>(allJobs); // Initial show all
         }
     }
 
-    private void GoHome()
-    {
-        Nav.NavigateTo("/dashboard");
-    }
-
-    private void ToggleFilters()
-    {
-        ShowFilters = !ShowFilters;
-    }
+    private void GoHome() => Nav.NavigateTo("/dashboard");
+    
+    private void ToggleFilters() => ShowFilters = !ShowFilters;
 
     private void ViewJob(ScrapedJob job)
     {
@@ -174,51 +216,51 @@
 
     private void ResetFilters()
     {
+        LocationFilter = "";
         MinSalaryFilter = 0;
         IncludeUnknownSalary = true;
         DateFilter = "All";
+        ApplyFilters(); // Reset view immediately
     }
 
-    // --- The Magic Filtering Logic ---
-    private IEnumerable<ScrapedJob> FilteredJobs
+    // --- Manual Apply Logic ---
+    private void ApplyFilters()
     {
-        get
-        {
-            var query = allJobs.AsEnumerable();
+        var query = allJobs.AsEnumerable();
 
-            // 1. Salary Filter
+        // 1. Conditional Location Filter
+        if (!string.IsNullOrWhiteSpace(LocationFilter))
+        {
+            query = query.Where(j => j.JobLocation != null && j.JobLocation.Contains(LocationFilter, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // 2. Salary Filter
+        query = query.Where(job => 
+        {
+            bool isUnknown = string.IsNullOrEmpty(job.JobSalary) || job.JobSalary.Contains("Not Specified") || job.JobSalary.Contains("Confidential") || job.JobSalary.Contains("Hidden");
+            if (isUnknown) return IncludeUnknownSalary;
+
+            var match = Regex.Match(job.JobSalary?.Replace(",", "") ?? "", @"\d+");
+            if (match.Success && int.TryParse(match.Value, out int salary))
+            {
+                return salary >= MinSalaryFilter;
+            }
+            return IncludeUnknownSalary;
+        });
+
+        // 3. Date Filter
+        if (DateFilter != "All")
+        {
             query = query.Where(job => 
             {
-                // If user wants to include unknown, we keep them
-                bool isUnknown = string.IsNullOrEmpty(job.JobSalary) || job.JobSalary.Contains("Not Specified") || job.JobSalary.Contains("Confidential") || job.JobSalary.Contains("Hidden");
-                if (isUnknown) return IncludeUnknownSalary;
-
-                // Otherwise, try to parse
-                // Simple regex to grab the first number found in string (e.g. "$1,000")
-                var match = Regex.Match(job.JobSalary?.Replace(",", "") ?? "", @"\d+");
-                if (match.Success && int.TryParse(match.Value, out int salary))
-                {
-                    return salary >= MinSalaryFilter;
-                }
-                
-                // If we can't parse it but it's not "unknown", keep if matched logic
-                return IncludeUnknownSalary;
+                string date = job.JobDatePosted?.ToLower() ?? "";
+                if (DateFilter == "Today") return date.Contains("hour") || date.Contains("minute") || date.Contains("today") || date.Contains("just now");
+                if (DateFilter == "Week") return !date.Contains("month") && !date.Contains("year") && (date.Contains("day") || date.Contains("week") || date.Contains("today") || date.Contains("yesterday"));
+                if (DateFilter == "Month") return !date.Contains("year");
+                return true;
             });
-
-            // 2. Date Filter
-            if (DateFilter != "All")
-            {
-                query = query.Where(job => 
-                {
-                    string date = job.JobDatePosted?.ToLower() ?? "";
-                    if (DateFilter == "Today") return date.Contains("hour") || date.Contains("minute") || date.Contains("today") || date.Contains("just now");
-                    if (DateFilter == "Week") return !date.Contains("month") && !date.Contains("year") && (date.Contains("day") || date.Contains("week") || date.Contains("today") || date.Contains("yesterday"));
-                    if (DateFilter == "Month") return !date.Contains("year");
-                    return true;
-                });
-            }
-
-            return query;
         }
+
+        DisplayedJobs = query.ToList();
     }
 }

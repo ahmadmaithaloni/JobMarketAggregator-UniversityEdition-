@@ -11,6 +11,7 @@ namespace BlazorFrontend.Services
         public UserProfile? CurrentUser { get; private set; }
         public ScrapedJob? SelectedJob { get; set; }
         public List<ScrapedJob> CurrentJobList { get; set; } = new List<ScrapedJob>();
+        public JobQuery CurrentQuery { get; set; } = new JobQuery(); // Store current search context
 
         public ApiService(HttpClient http)
         {
@@ -61,14 +62,25 @@ namespace BlazorFrontend.Services
                 UserMajor = profile.UserMajor
             };
             // send the request in a request body:
+            // send the request in a request body:
             var response = await _http.PostAsJsonAsync(path, RequestBody);
-            response.EnsureSuccessStatusCode();
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                // Clean up quotes if it's a JSON string
+                errorContent = errorContent.Trim('"');
+                throw new Exception(errorContent);
+            }
+            
             return await response.Content.ReadAsStringAsync();
         }
 
         public async Task<List<ScrapedJob>> SearchJobs(JobQuery query)
         {
             if (CurrentUser == null) throw new Exception("User not logged in.");
+            
+            CurrentQuery = query; // Save state for UI filters
 
             // Endpoint: /api/JobQuery/CreateJobQuery/v1/...
             var createPath = $"{BaseUrl}/api/JobQuery/CreateJobQuery/v1";
@@ -96,11 +108,30 @@ namespace BlazorFrontend.Services
             // Use the new Optimized Single Query Endpoint
             var fetchPath = $"{BaseUrl}/api/Scraping/ScrapeSingleQuery/v1/{createdQuery.QueryId}";
             var response = await _http.PostAsJsonAsync(fetchPath, RequestBody);
+            
+            // DEBUG: Read raw content to debug serialization
+            var content = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"[DEBUG] Raw JSON from Backend: {content}");
+
             if (response.IsSuccessStatusCode)
             {
-                var jobs = await response.Content.ReadFromJsonAsync<List<ScrapedJob>>();
-                 // Persist state
-                CurrentJobList = jobs?.ConvertAll(scrapeJob => scrapeJob) ?? new List<ScrapedJob>();
+                try 
+                {
+                    // Case-insensitive deserialization
+                    var options = new System.Text.Json.JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    };
+                    var jobs = System.Text.Json.JsonSerializer.Deserialize<List<ScrapedJob>>(content, options);
+                    
+                    CurrentJobList = jobs?.ConvertAll(scrapeJob => scrapeJob) ?? new List<ScrapedJob>();
+                    Console.WriteLine($"[DEBUG] Deserialized Count: {CurrentJobList.Count}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[DEBUG] Deserialization Failed: {ex.Message}");
+                    throw; // Re-throw to show error in UI
+                }
             }
             else
             {

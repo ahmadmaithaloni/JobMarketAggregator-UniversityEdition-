@@ -5,6 +5,7 @@ using ScraperAPI.DTOs;
 using ScraperAPI.Models;
 using System.Runtime.CompilerServices;
 using WebApplication1.Models;
+using System.Text.RegularExpressions;
 
 namespace ScraperAPI.Controllers
 {
@@ -26,75 +27,68 @@ namespace ScraperAPI.Controllers
         {
             
 
-            // check if the name already exist or not, or if it is not entered yet (second validation phase):
-            var Nuser = _dbContext.Users.FirstOrDefault(n => n.UserName==request.UserName);
-            if (request.UserName?.Length== 0 || !char.IsLetter(request.UserName[0]) || Nuser!=null)
+            // 1. Validate Username
+            if (string.IsNullOrWhiteSpace(request.UserName) || !char.IsLetter(request.UserName[0]))
             {
-                _logger.LogError("the user does not entered a username or the username starts with incorrect chars (does not contain letters in the first)");
-                return BadRequest("the user does not entered a username or the username starts with incorrect chars (does not contain letters in the first)");
+                _logger.LogError("Invalid username format.");
+                return BadRequest("Username must start with a letter and cannot be empty.");
+            }
+            if (await _dbContext.Users.AnyAsync(u => u.UserName == request.UserName))
+            {
+                _logger.LogError($"Username '{request.UserName}' is already taken.");
+                return BadRequest("Username is already taken.");
             }
 
-            // check if the user entered password and it was so weak or even does not entered any password, (and check if the password belongs to an already exist account (checked before)):
-            var Puser = _dbContext.Users.FirstOrDefault(u => u.UserPassword==request.UserPassword);
-            if (request.UserPassword.Length == 0 || Puser!= null)
+            // 2. Validate Password (Strict Regex)
+            // Pattern: At least 8 chars, 1 Upper, 1 Lower, 1 Digit, 1 Special Char
+            string PasswordPattern = @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$";
+            if (string.IsNullOrWhiteSpace(request.UserPassword) || !Regex.IsMatch(request.UserPassword, PasswordPattern))
             {
-                _logger.LogError("the user does not entered a password");
-                return BadRequest("the user does not entered a password");
+                _logger.LogError("Invalid password format.");
+                return BadRequest("Password must be at least 8 characters and include: Uppercase, Lowercase, Digit, and Special Character.");
             }
-            else
+
+            // 3. Validate Email (Regex)
+            string EmailPattern = @"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$";
+            if (string.IsNullOrWhiteSpace(request.UserEmail) || !Regex.IsMatch(request.UserEmail, EmailPattern))
             {
-                // follow the score to make the passkey stronger ( the scale is length, complexity, numeric usage, symbols), one point for each grade:
-                int PasswordScore = 0;
+                _logger.LogError($"Invalid email format: {request.UserEmail}");
+                return BadRequest("Invalid email address format.");
+            }
+            if (await _dbContext.Users.AnyAsync(u => u.UserEmail == request.UserEmail))
+            {
+                _logger.LogError($"Email '{request.UserEmail}' is already in use.");
+                return BadRequest("Email address is already registered.");
+            }
 
-                // rule 1: password length:
-                if (request.UserPassword.Length<8)
+            // 4. Validate Phone (Regex: Jordan Format)
+            // Pattern: 07 following by 7, 8, or 9, then 7 digits. Total 10 digits.
+            string PhonePattern = @"^07[789]\d{7}$";
+            if (!string.IsNullOrWhiteSpace(request.UserPhone))
+            {
+                if (!Regex.IsMatch(request.UserPhone, PhonePattern))
                 {
-                    _logger.LogError("the password is shorter than 8 chars");
-                    return BadRequest("the password is shorter than 8 chars");
+                    _logger.LogError($"Invalid phone format: {request.UserPhone}");
+                    return BadRequest("Phone number must be 10 digits starting with 077, 078, or 079.");
                 }
-
-                PasswordScore+=1;
-
-                // rule 2: password complexity (uppercase letters):
-                if (request.UserPassword.Any(char.IsUpper))
+                if (await _dbContext.Users.AnyAsync(u => u.UserPhone == request.UserPhone))
                 {
-                    PasswordScore += 1;
-                }
-
-                // rule 3: use numbers in the password:
-                if (request.UserPassword.Any(char.IsDigit))
-                {
-                    PasswordScore+=1;
-                }
-
-                // rule 4: check for using special characters (symbols):
-                if (request.UserPassword.Any(ch => !char.IsLetterOrDigit(ch)))
-                {
-                    PasswordScore += 1;
-                }
-
-                //final check if the password strong enough or not:
-                switch (PasswordScore) {
-
-                    case 4:
-                        _logger.LogInformation("user password is very strong");
-                        break;
-                    case 3:
-                        _logger.LogInformation("user password is strong");
-                        break;
-                    case 2:
-                        _logger.LogInformation("user password is medium");
-                        break;
-                    case 1:
-                        _logger.LogInformation("user password is very weak");
-                        break;
+                    _logger.LogError($"Phone '{request.UserPhone}' is already in use.");
+                    return BadRequest("Phone number is already registered.");
                 }
             }
 
-            // now we can create the user profile:
+            // 5. Validate Major (Regex: Letters only)
+            string MajorPattern = @"^[a-zA-Z\s\-\(\)]+$";
+            if (!string.IsNullOrWhiteSpace(request.UserMajor) && !Regex.IsMatch(request.UserMajor, MajorPattern))
+            {
+                _logger.LogError($"Invalid major format: {request.UserMajor}");
+                return BadRequest("Major must contain only letters, spaces, or hyphens.");
+            }
+
+            // Create User Profile
             var DbUser = new User
             {
-                //UserId = UserID,
                 UserName = request.UserName,
                 UserAddress = request.UserAddress,
                 UserEmail = request.UserEmail,

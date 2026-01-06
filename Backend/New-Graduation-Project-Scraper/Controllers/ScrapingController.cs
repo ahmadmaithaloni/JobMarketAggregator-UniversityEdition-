@@ -313,6 +313,27 @@ namespace ScraperAPI.Controllers
                 // 3. Save Results (if any)
                 if (scrapedJobs != null && scrapedJobs.Any())
                 {
+                    // FIX: Ensure correct SiteId linkage to avoid FK errors
+                    // Identify the scraper source (Bayt or Reed)
+                    // Currently ScrapeWebsiteAsync wraps correct scraper based on logic, but BaytScraper hardcodes ID 1.
+                    // We need to find the REAL ID of "Bayt.com" in the DB.
+                    var baytSite = await _dbContext.JobSites.FirstOrDefaultAsync(s => s.SiteName.Contains("Bayt"));
+                    var reedSite = await _dbContext.JobSites.FirstOrDefaultAsync(s => s.SiteName.Contains("Reed"));
+
+                    foreach (var job in scrapedJobs)
+                    {
+                        // Fallback logic: If scraper set ID 1, map it to real Bayt ID.
+                        if (job.SiteId == 1 && baytSite != null) job.SiteId = baytSite.SiteId;
+                        else if (job.SiteId == 2 && reedSite != null) job.SiteId = reedSite.SiteId;
+                        
+                        // Safety: If no site found, assign to First available or create one? 
+                        // For now, if baytSite is null, we are in trouble (Seeding failed).
+                        if (baytSite == null && job.SiteId == 1) 
+                        {
+                            _logger.LogWarning("Critical: Bayt.com site not found in DB. Seeding issue?");
+                        }
+                    }
+
                     _dbContext.ScrapedJobs.AddRange(scrapedJobs);
                     await _dbContext.SaveChangesAsync();
                     _logger.LogInformation($"Successfully scraped and saved {scrapedJobs.Count} jobs for QueryId: {QueryId}");
