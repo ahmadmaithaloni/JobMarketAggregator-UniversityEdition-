@@ -18,11 +18,20 @@ namespace ScraperAPI.Controllers
         private readonly ScrapingEngineDbContext _dbContext;
         private readonly ILogger<ScrapingController> _logger;
         private readonly IScrapingService _scraper;
-        public ScrapingController(ScrapingEngineDbContext dbContext, ILogger<ScrapingController> logger, IScrapingService scraper)
+        private readonly ScraperAPI.Services.LocationMapper_Service.ILocationMapperService _locationMapper;
+
+        public ScrapingController(ScrapingEngineDbContext dbContext, ILogger<ScrapingController> logger, IScrapingService scraper, ScraperAPI.Services.LocationMapper_Service.ILocationMapperService locationMapper)
         {
             _dbContext = dbContext;
             _logger = logger;
             _scraper = scraper;
+            _locationMapper = locationMapper;
+        }
+
+        [HttpGet("GetLocations")]
+        public ActionResult<List<string>> GetLocations()
+        {
+            return Ok(_locationMapper.GetAllLocations());
         }
 
         [HttpDelete("DeleteAllJobSites")]

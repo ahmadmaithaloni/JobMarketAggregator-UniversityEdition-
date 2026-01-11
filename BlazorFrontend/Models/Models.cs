@@ -31,6 +31,7 @@ namespace BlazorFrontend.Models
         public TimeOnly QjobEndTime { get; set; }
         public decimal QlowSalary { get; set; }
         public decimal QhighSalary { get; set; }
+        public DateTime CreationDate { get; set; }
     }
 
     public class ScrapedJob

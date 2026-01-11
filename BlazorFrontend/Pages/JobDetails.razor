@@ -39,11 +39,19 @@
                         @Api.SelectedJob.JobLocation
                     </span>
                     
-                    <!-- Site Source -->
                     <span style="display: flex; align-items: center; gap: 0.4rem; background: var(--bg-card); color: var(--text-main); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 500; border: 1px solid var(--border);">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
                         @Api.SelectedJob.SiteName
                     </span>
+
+                    <!-- Date Posted -->
+                    @if (!string.IsNullOrEmpty(Api.SelectedJob.JobDatePosted))
+                    {
+                        <span style="display: flex; align-items: center; gap: 0.4rem; background: var(--bg-card); color: var(--text-main); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 500; border: 1px solid var(--border);">
+                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                             @FormatDate(Api.SelectedJob.JobDatePosted)
+                        </span>
+                    }
 
                     <!-- Availability Badge -->
                     @if (Api.SelectedJob.IsAvailable)
@@ -102,6 +110,15 @@
 @code {
     private void GoBack()
     {
-        Nav.NavigateTo("dashboard");
+        Nav.NavigateTo("results"); // Changed from "dashboard" to keep context
+    }
+
+    private string FormatDate(string dateStr)
+    {
+        if (DateTime.TryParse(dateStr, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime dt))
+        {
+            return dt.ToString("dd MMM yyyy, hh:mm tt"); // e.g. 12 Jan 2026, 08:30 PM
+        }
+        return dateStr; // Fallback to original string if not parseable
     }
 }

@@ -1,6 +1,8 @@
 using ScraperAPI.Models;
 using Microsoft.Playwright;
 using ScraperAPI.Services.ScraperService;
+using WebApplication1.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace ScraperAPI.Services.ScraperService
 {
@@ -9,9 +11,11 @@ namespace ScraperAPI.Services.ScraperService
         public string ScraperName => "Reed"; // scraper name
         // inject the logger:
         private readonly ILogger<ReedScraper> _logger;
-        public ReedScraper(ILogger<ReedScraper> logger)
+        private readonly ScrapingEngineDbContext _dbContext;
+        public ReedScraper(ILogger<ReedScraper> logger, ScrapingEngineDbContext dbContext)
         {
             _logger = logger;
+            _dbContext = dbContext;
         }
 
         // Scraping Method:
@@ -131,6 +135,7 @@ namespace ScraperAPI.Services.ScraperService
                 _logger.LogInformation($"Found {JobLinks.Count} links on Reed.");
                 // 19. visit each job link and collect the data from it:
                 int counter = 1;
+                int WebsiteID = _dbContext.JobSites.FirstOrDefaultAsync(w => w.SiteName == "Reed.co.uk").Id;
                 foreach (var link in JobLinks)
                 {
                     try
@@ -161,7 +166,7 @@ namespace ScraperAPI.Services.ScraperService
                             JobUrl = link,
                             JobLocation = LocationValue.Trim(),
                             JobDescription = JobDescription.Trim(), 
-                            SiteId = 7, // Ensure this matches your DB ID for Reed
+                            SiteId = WebsiteID, 
                             IsAvailable = true,
                             QueryId = QueryID,
                             JobNotes = "Deep Scraped: Full Details Fetched from Reed.co.uk site"

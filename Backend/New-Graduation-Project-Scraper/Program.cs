@@ -22,6 +22,7 @@ builder.Services.AddScoped<ILocationMapperService, LocationMapper>(); // registe
 builder.Services.AddScoped<IScrapingService, DynamicScrapingEngine>(); // regester the dynamic scraping engine as scraping service
 builder.Services.AddScoped<IScraperService, BaytScraper>(); // first scraper regestration under scraping engine
 builder.Services.AddScoped<IScraperService, ReedScraper>(); // second scraper regestration under scraping engine
+builder.Services.AddScoped<IScraperService, BaytScraperV2>(); // third scraper regestration under scraping engine
 //builder.Services.Configure<SerpApiSettings>(builder.Configuration.GetSection("SerpApi")); // regester the serp api key from appsettings as a service (for security)
 
 builder.Services.AddCors(options =>

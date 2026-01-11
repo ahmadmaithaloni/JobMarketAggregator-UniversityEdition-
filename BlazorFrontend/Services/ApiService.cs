@@ -263,5 +263,19 @@ namespace BlazorFrontend.Services
                 return new List<ScrapedJob>();
             }
         }
+
+        public async Task<List<string>> GetLocations()
+        {
+            var path = $"{BaseUrl}/api/Scraping/GetLocations";
+            try
+            {
+                var locations = await _http.GetFromJsonAsync<List<string>>(path);
+                return locations ?? new List<string>();
+            }
+            catch
+            {
+                return new List<string>();
+            }
+        }
     }
 }

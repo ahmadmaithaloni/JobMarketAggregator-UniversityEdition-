@@ -11,24 +11,86 @@
     }
     else
     {
-        <!-- Section 1: Recent Topics (Dashboard) -->
-        <div style="margin-bottom: 2.5rem;">
-            <h2 style="font-size: 1.1rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 1rem;">
-                Recent Searches
-            </h2>
+        <!-- Section 1: Hero Search Section (Moved to Top) -->
+        <div style="margin-bottom: 3rem; text-align: center; padding: 3rem 1rem;">
+            <h1 style="font-size: 2.5rem; font-weight: 800; margin-bottom: 1rem; background: var(--hero-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -1px;">
+                Find Your Dream Job
+            </h1>
+            <p style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 2rem; max-width: 600px; margin-left: auto; margin-right: auto;">
+                Search across multiple platforms instantly. One search, thousands of opportunities.
+            </p>
+
+            <div class="card" style="padding: 2rem; border: none; background: var(--bg-card); box-shadow: var(--shadow); max-width: 800px; margin: 0 auto; border-radius: 16px;">
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 250px; text-align: left;">
+                        <label class="input-label" style="font-size: 0.9rem;">Job Title</label>
+                        <div style="position: relative;">
+                            <input @bind="query.JobName" class="form-control" placeholder="e.g. Software Engineer" style="padding-left: 2.8rem; padding-top: 1rem; padding-bottom: 1rem; font-size: 1rem; border-radius: 8px;" />
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                        </div>
+                    </div>
+                    
+                    <div style="flex: 1; min-width: 250px; text-align: left;">
+                        <label class="input-label" style="font-size: 0.9rem;">Location</label>
+                         <div style="position: relative;">
+                            <input @bind="query.Location" list="locationList" class="form-control" placeholder="e.g. Jordan" style="padding-left: 2.8rem; padding-top: 1rem; padding-bottom: 1rem; font-size: 1rem; border-radius: 8px;" />
+                            <datalist id="locationList">
+                                @foreach (var loc in availableLocations)
+                                {
+                                    <option value="@loc"></option>
+                                }
+                            </datalist>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" @onclick="Search" disabled="@isLoading" style="margin-top: 1.5rem; width: 100%; padding: 1rem; font-size: 1.1rem; border-radius: 8px; font-weight: 700;">
+                    @if (isLoading)
+                    {
+                        <span>Searching...</span>
+                    }
+                    else
+                    {
+                        <span style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            Find Jobs
+                        </span>
+                    }
+                </button>
+                @if (!string.IsNullOrEmpty(error))
+                {
+                    <div style="margin-top: 1rem; background-color: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #ef4444; padding: 0.75rem; border-radius: 8px; text-align: center; font-size: 0.95rem; font-weight: 500;">
+                        @error
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Section 2: Recent Searches (Moved Below) -->
+        <div style="margin-bottom: 3rem; max-width: 900px; margin-left: auto; margin-right: auto;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+                <h2 style="font-size: 1.2rem; color: var(--text-main); font-weight: 700; margin: 0;">
+                    Recent Searches
+                </h2>
+                <span style="font-size: 0.85rem; color: var(--text-muted);">Quick access to your history</span>
+            </div>
             
             @if (recentQueries.Any())
             {
-                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
                     @foreach (var q in recentQueries)
                     {
-                        <div class="card" @onclick="() => LoadQuery(q)" style="padding: 1rem; cursor: pointer; border: 1px solid var(--border); transition: all 0.2s; display: flex; align-items: center; gap: 0.75rem;">
-                            <div style="background: var(--bg-surface); padding: 0.5rem; border-radius: 50%; display: flex;">
+                        <div class="card" @onclick="() => LoadQuery(q)" style="padding: 1.25rem; cursor: pointer; border: 1px solid var(--border); transition: all 0.2s; display: flex; align-items: center; gap: 1rem; margin-bottom: 0; background: var(--bg-surface); border-radius: 12px;">
+                            <div style="background: rgba(var(--primary-rgb), 0.1); padding: 0.75rem; border-radius: 10px; display: flex; color: var(--primary);">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                             </div>
                             <div>
-                                <div style="font-weight: 600; color: var(--text-main); font-size: 0.95rem;">@q.QjobName</div>
-                                <div style="font-size: 0.8rem; color: var(--text-muted);">@q.QjobLocation</div>
+                                <div style="font-weight: 600; color: var(--text-main); font-size: 1rem;">@q.QjobName</div>
+                                <div style="font-size: 0.85rem; color: var(--text-muted);">@q.QjobLocation</div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted); opacity: 0.8; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                    @q.CreationDate.ToString("MMM dd • hh:mm tt")
+                                </div>
                             </div>
                         </div>
                     }
@@ -36,56 +98,14 @@
             }
             else
             {
-                <p style="font-style: italic; opacity: 0.6;">No recent searches yet.</p>
+                <div style="text-align: center; padding: 3rem; border: 1px dashed var(--border); border-radius: 12px; color: var(--text-muted);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 0.5rem; opacity: 0.5;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <p style="margin: 0;">Your recent searches will appear here</p>
+                </div>
             }
         </div>
 
-        <!-- Section 2: Search Section -->
-        <div style="margin-bottom: 2rem;">
-            <h2 style="font-size: 1.1rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 1rem;">
-                New Search
-            </h2>
-            <div class="card" style="padding: 1.5rem; border: none; background: var(--bg-card); box-shadow: var(--shadow);">
-                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                    <div style="flex: 1; min-width: 250px;">
-                        <label class="input-label">Job Title</label>
-                        <div style="position: relative;">
-                            <input @bind="query.JobName" class="form-control" placeholder="e.g. Software Engineer" style="padding-left: 2.5rem;" />
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-                        </div>
-                    </div>
-                    
-                    <div style="flex: 1; min-width: 250px;">
-                        <label class="input-label">Location</label>
-                         <div style="position: relative;">
-                            <input @bind="query.Location" class="form-control" placeholder="e.g. Jordan" style="padding-left: 2.5rem;" />
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                        </div>
-                    </div>
-                </div>
-                <button class="btn btn-primary" @onclick="Search" disabled="@isLoading" style="margin-top: 1.5rem; width: 100%;">
-                    @if (isLoading)
-                    {
-                        <span>Searching...</span>
-                    }
-                    else
-                    {
-                        <span style="display: flex; align-items: center; gap: 0.5rem;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                            Find Jobs
-                        </span>
-                    }
-                </button>
-            </div>
-        </div>
 
-        <!-- Error Message -->
-        @if (!string.IsNullOrEmpty(error))
-        {
-            <div class="card" style="background-color: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444; color: #ef4444; margin-bottom: 2rem;">
-                @error
-            </div>
-        }
 
         <!-- Results Moved to /results Page -->
     
@@ -102,6 +122,7 @@
     // No need for 'jobs' list here anymore
     // private List<ScrapedJob> jobs = new List<ScrapedJob>();
     private List<JobQuery> recentQueries = new List<JobQuery>();
+    private List<string> availableLocations = new List<string>();
     private bool isLoading = false;
     private string error = "";
 
@@ -115,7 +136,11 @@
         
         try 
         {
-            recentQueries = await Api.GetMyQueries();
+            var t1 = Api.GetMyQueries();
+            var t2 = Api.GetLocations();
+            await Task.WhenAll(t1, t2);
+            recentQueries = t1.Result;
+            availableLocations = t2.Result;
         }
         catch {}
     }

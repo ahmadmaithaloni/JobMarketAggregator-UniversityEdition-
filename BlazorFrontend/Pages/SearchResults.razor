@@ -18,13 +18,13 @@
                     @if(!string.IsNullOrEmpty(Api.CurrentQuery.QjobName)) 
                     { <span style="font-weight: 400; opacity: 0.7;">for "@Api.CurrentQuery.QjobName"</span> }
                 </h2>
-                <div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem;">
+                <div style="font-size: 1.1rem; color: var(--primary); font-weight: 600; margin-top: 0.25rem;">
                     Found @DisplayedJobs.Count() jobs
                 </div>
             </div>
         </div>
         
-        <button class="btn" @onclick="ToggleFilters" style="background: @(ShowFilters ? "var(--primary)" : "var(--bg-card)"); color: @(ShowFilters ? "white" : "var(--text-main)"); border: 1px solid var(--border); padding: 0.5rem 1rem; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s;">
+        <button class="btn" @onclick="ToggleFilters" style="background: @(ShowFilters ? "var(--primary)" : "var(--bg-card)"); color: @(ShowFilters ? "var(--bg-card)" : "var(--primary)"); border: 1px solid var(--border); padding: 0.5rem 1rem; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s;">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
             Filters
         </button>
@@ -76,7 +76,8 @@
                                             <span style="width: 4px; height: 4px; background: var(--border); border-radius: 50%;"></span>
                                             <span style="display: flex; align-items: center; gap: 0.4rem;">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                                                @job.JobDatePosted
+                                                @job.JobDatePosted 
+                                                <span style="font-size: 0.7rem; color: red;">(Debug: @job.JobDatePosted)</span>
                                             </span>
                                         }
                                     </div>
@@ -144,6 +145,15 @@
                         </label>
                     </div>
 
+                    <!-- 4. Status Filter -->
+                    <div class="filter-group">
+                        <label class="input-label" style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600;">Job Status</label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; color: var(--text-muted);">
+                            <input type="checkbox" @bind="ShowOnlyActive" style="accent-color: var(--primary);" />
+                            Show Only Active Jobs
+                        </label>
+                    </div>
+
                     <!-- Apply Button -->
                     <button class="btn btn-primary" @onclick="ApplyFilters" style="width: 100%; padding: 0.75rem; justify-content: center; margin-top: 1rem;">
                         Submit Filters
@@ -186,6 +196,7 @@
     private string LocationFilter { get; set; } = "";
     private int MinSalaryFilter { get; set; } = 0;
     private bool IncludeUnknownSalary { get; set; } = true;
+    private bool ShowOnlyActive { get; set; } = false;
     private string DateFilter { get; set; } = "All";
 
     protected override void OnInitialized()
@@ -248,19 +259,58 @@
             return IncludeUnknownSalary;
         });
 
-        // 3. Date Filter
-        if (DateFilter != "All")
+        // 3. Status Filter
+        if (ShowOnlyActive)
         {
-            query = query.Where(job => 
-            {
-                string date = job.JobDatePosted?.ToLower() ?? "";
-                if (DateFilter == "Today") return date.Contains("hour") || date.Contains("minute") || date.Contains("today") || date.Contains("just now");
-                if (DateFilter == "Week") return !date.Contains("month") && !date.Contains("year") && (date.Contains("day") || date.Contains("week") || date.Contains("today") || date.Contains("yesterday"));
-                if (DateFilter == "Month") return !date.Contains("year");
-                return true;
-            });
+            query = query.Where(job => job.IsAvailable);
         }
+
+        // 4. Date Filter
+            if (DateFilter != "All")
+            {
+                query = query.Where(job => IsDateMatch(job.JobDatePosted, DateFilter));
+            }
 
         DisplayedJobs = query.ToList();
     }
+
+    private bool IsDateMatch(string? dateStr, string filter)
+    {
+        if (string.IsNullOrWhiteSpace(dateStr)) return false;
+        string lowerDate = dateStr.ToLower();
+
+        // 1. Check relative terms first
+        bool isToday = lowerDate.Contains("today") || lowerDate.Contains("just now") || 
+                       lowerDate.Contains("hour") || lowerDate.Contains("minute");
+        
+        bool isYesterday = lowerDate.Contains("yesterday");
+
+        if (filter == "Today")
+        {
+            if (isToday) return true;
+            // Relaxed: Include today and yesterday (since "24 hours" can cross day boundaries)
+            if (DateTime.TryParse(dateStr, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime dt)) 
+            {
+                return dt.Date >= DateTime.Today.AddDays(-1); 
+            }
+        }
+
+        if (filter == "Week")
+        {
+            if (isToday || isYesterday || lowerDate.Contains("day ago")) return true;
+            if (DateTime.TryParse(dateStr, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime dt)) 
+            {
+                return dt.Date >= DateTime.Today.AddDays(-7);
+            }
+        }
+
+        if (filter == "Month")
+        {
+            if (isToday || isYesterday || lowerDate.Contains("day") || lowerDate.Contains("week")) return true;
+            if (DateTime.TryParse(dateStr, out DateTime dt)) return dt.Date >= DateTime.Today.AddDays(-30);
+        }
+
+        return false;
+    }
 }
+

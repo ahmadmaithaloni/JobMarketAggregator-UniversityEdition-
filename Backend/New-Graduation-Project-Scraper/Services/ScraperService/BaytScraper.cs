@@ -26,7 +26,7 @@ namespace ScraperAPI.Services.ScraperService
             var Browser = await PlayWright.Chromium.LaunchAsync(
                 new BrowserTypeLaunchOptions
                 {
-                    Headless = true, // can change to see what happened
+                    Headless = false, // can change to see what happened
                     Channel= "chrome",
                     Args = new[] 
                     {
@@ -48,7 +48,6 @@ namespace ScraperAPI.Services.ScraperService
             var page = await Context.NewPageAsync();
             // 4. create empty Jobs List to fill it up with scraped jobs & list of string job links:
             List<ScrapedJob> ScrapedJobs = new List<ScrapedJob>();
-
             List<string> JobLinks = new List<string>();
             // 5. construct the initial search url for bayt.com and navigate to it:
             string? Url = $"https://www.bayt.com/en/";
@@ -57,7 +56,6 @@ namespace ScraperAPI.Services.ScraperService
             // 6. put the scraping method in try block:
             try
             {
-                // 7. locate the job search box from bayt.com
                 // 7. locate the job search box (Keyword)
                 var SearchInput = page.Locator("input[id='text_search']").First; 
                 if (await SearchInput.CountAsync() == 0)
@@ -67,29 +65,50 @@ namespace ScraperAPI.Services.ScraperService
 
                 // 8. Locate the Location box
                 // Strategy: Common placeholders or Name attributes for Bayt
-                var LocationInput = page.Locator("input[id='search_country']").First; // Try by ID first
+                var LocationInput = page.Locator("input[id='search_country__r']").First; // Try by ID first
                 if (await LocationInput.CountAsync() == 0)
                 {
                     // Fallback to placeholders if ID fails
                     LocationInput = page.GetByPlaceholder("City, country or region").First; 
                 }
-
                 // 9. Fill Inputs
                 _logger.LogInformation($"Filling Search Form: Keyword='{QJobName}', Location='{QJobLocation}'");
-                
                 await SearchInput.FillAsync(QJobName);
-
+                //await SearchInput.PressAsync("Tab");
                 if (!string.IsNullOrWhiteSpace(QJobLocation) && await LocationInput.CountAsync() > 0)
                 {
-                    await LocationInput.FillAsync(QJobLocation);
-                    // Sometimes dropdowns appear, pressing Tab helps close them or select top match
-                    await LocationInput.PressAsync("Tab"); 
+                    await LocationInput.ClickAsync();
+                    //await LocationInput.ClearAsync();
+                    await page.Keyboard.TypeAsync(QJobLocation, new KeyboardTypeOptions { Delay = 100 });
+                    
+                    // Wait for the dropdown suggestion to appear
+                    try {
+                        await page.WaitForSelectorAsync("ul.options is-autosize, .autocomplete-suggestion", new PageWaitForSelectorOptions { Timeout = 5000 });
+                        await page.Keyboard.PressAsync("ArrowDown");
+                        await page.Keyboard.PressAsync("Enter");
+                    } catch {
+                        await LocationInput.PressAsync("Enter");
+                    }
+                    await Task.Delay(1000); 
                 }
                 
-                // 10. Submit Search
-                _logger.LogInformation("Submitting search...");
-                await SearchInput.PressAsync("Enter");
+                // 10. Submit Search explicitly via Button
+                _logger.LogInformation("Submitting search via Button...");
                 
+                // Try to find the search button
+                var searchButton = page.Locator("button[data-js-id='search-button'], button.is-primary, button[type='submit']").First;
+                
+                if (await searchButton.CountAsync() > 0 && await searchButton.IsVisibleAsync())
+                {
+                    await searchButton.ClickAsync();
+                }
+                else
+                {
+                    // Fallback to Enter ONLY if button is missing
+                    _logger.LogWarning("Search button not found, falling back to Enter key on Keyword field.");
+                    await SearchInput.PressAsync("Enter");
+                }
+
                 // 10. Wait for results to load
                 _logger.LogInformation("Waiting for job listings...");
                 try 
@@ -196,23 +215,11 @@ namespace ScraperAPI.Services.ScraperService
                         var LocationItem = await page.QuerySelectorAsync("ul.list.is-basic li span.t-mute")
                                          ?? await page.QuerySelectorAsync(".job-detail-header .t-mute");
                         string LocationValue = LocationItem != null ? await LocationItem.InnerTextAsync() : "Unknown";
-                        // Client-Side Filtering: STRICT LOCATION CHECK
-                        // if (!string.IsNullOrWhiteSpace(QJobLocation))
-                        // {
-                        //     // If user asked for a location, and this job is NOT in that location, SKIP IT.
-                        //     if (!LocationValue.Contains(QJobLocation, StringComparison.OrdinalIgnoreCase))
-                        //     {
-                        //         _logger.LogInformation($"Skipping job '{link}' - Location '{LocationValue}' does not match requested '{QJobLocation}'");
-                        //         counter++;
-                        //         continue;
-                        //     }
-                        // }
-                        // 25. grab the title:
                         var TitleElement = await page.QuerySelectorAsync("#job_title") 
                                          ?? await page.QuerySelectorAsync("h1")
                                          ?? await page.QuerySelectorAsync(".job-view-header h1");
                                          
-                        string JobTitle = TitleElement != null ? await TitleElement.InnerTextAsync() : null;
+                        string? JobTitle = TitleElement != null ? await TitleElement.InnerTextAsync() : null;
                         if (string.IsNullOrWhiteSpace(JobTitle))
                         {
                             // Fallback: If we can't find title on the page, use a generic one or try to infer from metadata
@@ -272,7 +279,8 @@ namespace ScraperAPI.Services.ScraperService
                             SiteId = 1, // RE-VERIFY: Seeding MUST ensure ID 1 is Bayt.
                             IsAvailable = true,
                             QueryId = QueryID,
-                            JobNotes = "Deep Scraped: Full Details Fetched from Bayt.com site"
+                            JobNotes = "Deep Scraped: Full Details Fetched from Bayt.com site with pagination feature",
+                            // CreationDate = DateTime.Now // REMOVED to prevent crash
                         });
                         // 30. update the counter and add delay:
                         counter++;

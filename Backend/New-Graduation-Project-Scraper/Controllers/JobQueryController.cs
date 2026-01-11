@@ -66,6 +66,24 @@ namespace ScraperAPI.Controllers
                 return BadRequest("Low salary cannot be greater than high salary");
             }
 
+            // --- enforce limit of 10 queries per user ---
+            var existingQueriesCount = await _dbContext.JobQueries.CountAsync(q => q.UserId == request.UserID);
+            if (existingQueriesCount >= 10)
+            {
+                var oldestQuery = await _dbContext.JobQueries
+                    .Where(q => q.UserId == request.UserID)
+                    .OrderBy(q => q.CreationDate)
+                    .FirstOrDefaultAsync();
+
+                if (oldestQuery != null)
+                {
+                    _dbContext.JobQueries.Remove(oldestQuery);
+                    // We don't save changes here yet, we'll save when we add the new one.
+                    _logger.LogInformation($"Limit of 10 reached. Deleted oldest query ID: {oldestQuery.QueryId} for User: {request.UserID}");
+                }
+            }
+            // --------------------------------------------
+
             // check if the query exist already in the db (validation 3th phase):
             var UserQuery = await _dbContext.JobQueries.FirstOrDefaultAsync(uq => uq.QjobName == request.JobName && uq.QjobLocation == request.JobLocation); 
 

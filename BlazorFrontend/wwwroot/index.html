@@ -40,24 +40,27 @@
     <script src="_framework/blazor.webassembly.js"></script>
     <script>navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });</script>
     <script>
+        // Initialize Theme (Default to Light)
+        (function () {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                document.body.classList.add(savedTheme);
+            } else {
+                // Default to Light Mode (ignoring system preference initially)
+                document.body.classList.add('light-mode');
+            }
+        })();
+
         window.toggleTheme = () => {
-            // Check if body has dark-mode or light-mode
             const body = document.body;
             if (body.classList.contains('dark-mode')) {
                 body.classList.remove('dark-mode');
                 body.classList.add('light-mode');
-            } else if (body.classList.contains('light-mode')) {
+                localStorage.setItem('theme', 'light-mode');
+            } else {
                 body.classList.remove('light-mode');
                 body.classList.add('dark-mode');
-            } else {
-                // No class set, check system pref
-                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    // System is dark, switch to light
-                    body.classList.add('light-mode');
-                } else {
-                    // System is light, switch to dark
-                    body.classList.add('dark-mode');
-                }
+                localStorage.setItem('theme', 'dark-mode');
             }
         }
     </script>

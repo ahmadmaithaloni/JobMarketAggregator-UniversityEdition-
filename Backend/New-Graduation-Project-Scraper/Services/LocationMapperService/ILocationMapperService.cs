@@ -4,5 +4,6 @@
     {
         string GetTargetScraperKey(string location);
         string MapLocationToCountry(string location);
+        List<string> GetAllLocations();
     }
 }

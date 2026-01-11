@@ -57,7 +57,7 @@ namespace ScraperAPI.Services.Scraping_Service
 
             if (ScraperKey == "MENA")
             {
-                SelectedScraper = _scraper.FirstOrDefault(s => s.ScraperName == "Bayt");
+                SelectedScraper = _scraper.FirstOrDefault(s => s.ScraperName == "bayt");
             }
             else if (ScraperKey == "UK")
             {

@@ -214,5 +214,16 @@ namespace ScraperAPI.Services.LocationMapper_Service
             return "international";
 
         }
+
+        public List<string> GetAllLocations()
+        {
+            var locations = new List<string>();
+            // Add all cities (Keys)
+            locations.AddRange(CityToCountryMap.Keys);
+            // Add all countries (Values) - Distinct to avoid duplicates
+            locations.AddRange(CityToCountryMap.Values.Distinct());
+            
+            return locations.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToList();
+        }
     }
 }
