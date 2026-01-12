@@ -35,7 +35,6 @@ public partial class ScrapedJob
     [StringLength(100)]
     public string? JobDatePosted { get; set; }
 
-    [StringLength(1000)]
     public string? JobNotes { get; set; }
 
     public bool IsAvailable { get; set; }

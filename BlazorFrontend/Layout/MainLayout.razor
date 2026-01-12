@@ -1,6 +1,9 @@
 ﻿@inherits LayoutComponentBase
 @inject BlazorFrontend.Services.ApiService Api
 
+@implements IDisposable
+@inject NavigationManager Nav
+
 <div class="page">
     <!-- Top Bar -->
     <div class="top-bar" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: var(--bg-card); position: sticky; top: 0; z-index: 50; border-bottom: 1px solid var(--border); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.1);">
@@ -25,7 +28,7 @@
                     Hello, <span style="color: var(--text-main); font-weight: 600;">@Api.CurrentUser.UserName</span>
                 </span>
                 
-                <a href="/" style="color: var(--text-muted); text-decoration: none; font-size: 0.9rem; font-weight: 500; border: 1px solid var(--border); padding: 0.4rem 0.8rem; border-radius: 6px; transition: all 0.2s;">Log Out</a>
+                <button @onclick="Logout" style="background: transparent; cursor: pointer; color: var(--text-muted); text-decoration: none; font-size: 0.9rem; font-weight: 500; border: 1px solid var(--border); padding: 0.4rem 0.8rem; border-radius: 6px; transition: all 0.2s;">Log Out</button>
             }
             else
             {
@@ -48,6 +51,22 @@
             @Body
         </div>
     </div>
-    
-    <!-- Bottom Nav Removed for Desktop Feel -->
 </div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Api.OnAuthStateChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        Api.OnAuthStateChanged -= StateHasChanged;
+    }
+
+    private void Logout()
+    {
+        Api.Logout();
+        Nav.NavigateTo("/");
+    }
+}

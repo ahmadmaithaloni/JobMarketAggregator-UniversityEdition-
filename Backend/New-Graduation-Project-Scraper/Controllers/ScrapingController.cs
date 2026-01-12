@@ -346,7 +346,26 @@ namespace ScraperAPI.Controllers
                     _dbContext.ScrapedJobs.AddRange(scrapedJobs);
                     await _dbContext.SaveChangesAsync();
                     _logger.LogInformation($"Successfully scraped and saved {scrapedJobs.Count} jobs for QueryId: {QueryId}");
-                    return Ok(scrapedJobs);
+                    
+                    // Project to include SiteName for Frontend
+                    var result = scrapedJobs.Select(job => new 
+                    {
+                        job.JobId,
+                        job.JobName,
+                        job.JobLocation,
+                        job.JobUrl,
+                        job.JobDescription,
+                        job.JobSalary,
+                        job.JobDatePosted,
+                        job.JobNotes,
+                        job.IsAvailable,
+                        job.SiteId,
+                        job.QueryId,
+                        SiteName = (job.SiteId == baytSite?.SiteId) ? baytSite.SiteName : 
+                                   (job.SiteId == reedSite?.SiteId) ? reedSite.SiteName : "Job Site"
+                    });
+
+                    return Ok(result);
                 }
                 else
                 {

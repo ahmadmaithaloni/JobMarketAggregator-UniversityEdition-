@@ -20,11 +20,14 @@ namespace BlazorFrontend.Services
             _http.Timeout = TimeSpan.FromMinutes(5);
         }
 
+        public event Action? OnAuthStateChanged;
+
         public void Logout()
         {
             CurrentUser = null;
             CurrentJobList.Clear();
             SelectedJob = null;
+            OnAuthStateChanged?.Invoke();
         }
 
         public async Task<bool> Login(string email, string password)
@@ -38,6 +41,7 @@ namespace BlazorFrontend.Services
                 if (response.IsSuccessStatusCode)
                 {
                     CurrentUser = await response.Content.ReadFromJsonAsync<UserProfile>();
+                    OnAuthStateChanged?.Invoke();
                     return true;
                 }
                 return false;

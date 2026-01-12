@@ -159,11 +159,12 @@ namespace ScraperAPI.Services.ScraperService
 
                     string? JobSalary = "Not Specified";
                     string? JobDatePosted = "Not Specified";
+                    string? jsonLd = null;
 
                     // STRATEGY 1: JSON-LD (Structured Data) - The "Pro" Way
                     try 
                     {
-                        var jsonLd = await page.EvaluateAsync<string>(@"() => {
+                        jsonLd = await page.EvaluateAsync<string>(@"() => {
                             const script = document.querySelector('script[type=""application/ld+json""]');
                             return script ? script.innerText : null;
                         }");
@@ -207,6 +208,51 @@ namespace ScraperAPI.Services.ScraperService
                         }
                     }
 
+                    // STRATEGY 2: Extract Skills for "JobNotes"
+                    string JobSkills = "No specific skills extracted.";
+                    
+                    // A. Try JSON-LD "skills"
+                    try 
+                    {
+                        if (!string.IsNullOrEmpty(jsonLd))
+                        {
+                            using (var doc = System.Text.Json.JsonDocument.Parse(jsonLd))
+                            {
+                                if (doc.RootElement.TryGetProperty("skills", out var skillsElement))
+                                {
+                                     // Skills can be a single string or an array of strings
+                                     if (skillsElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+                                     {
+                                         var skillsList = skillsElement.EnumerateArray().Select(s => s.GetString()).Where(s => !string.IsNullOrWhiteSpace(s));
+                                         JobSkills = string.Join(", ", skillsList);
+                                     }
+                                     else if (skillsElement.ValueKind == System.Text.Json.JsonValueKind.String)
+                                     {
+                                         JobSkills = skillsElement.GetString() ?? JobSkills;
+                                     }
+                                     _logger.LogInformation($"Extracted Skills (JSON-LD): {JobSkills}");
+                                }
+                            }
+                        }
+                    }
+                    catch { /* Ignore JSON errors for skills, we have a fallback */ }
+
+                    // B. Fallback to Visual Scraping for Skills if still empty/default
+                    if (JobSkills == "No specific skills extracted.")
+                    {
+                         // Bayt often puts skills in a specific div logic
+                         // Look for definition lists or divs following a "Skills" header
+                         var skillsSection = await page.QuerySelectorAsync("//div[contains(., 'Skills') and contains(@class, 'card-content')]") 
+                                          ?? await page.QuerySelectorAsync("//dt[contains(., 'Skills')]/following-sibling::dd");
+                         
+                         if (skillsSection != null)
+                         {
+                             var text = await skillsSection.InnerTextAsync();
+                             // Clean up the text (remove the word "Skills" itself if captured)
+                             JobSkills = text.Replace("Skills", "").Trim();
+                         }
+                    }
+
                     ScrapedJobs.Add(new ScrapedJob
                     {
                         JobName = JobTitle.Trim(),
@@ -219,7 +265,7 @@ namespace ScraperAPI.Services.ScraperService
                         SiteId = WebsiteID,
                         IsAvailable = isJobActive,
                         QueryId = QueryID,
-                        JobNotes = "Deep Scraped via Direct Link strategy",
+                        JobNotes = JobSkills, // Populated with Skills (Full text, no truncation)
                     });
 
                     counter++;

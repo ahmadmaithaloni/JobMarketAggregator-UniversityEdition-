@@ -137,12 +137,28 @@ namespace ScraperAPI.Controllers
         {
             var jobs = await _dbContext.ScrapedJobs
                 .Where(j => j.QueryId == QueryId)
+                .Include(j => j.Site)
+                .Select(j => new 
+                {
+                    j.JobId,
+                    j.JobName,
+                    j.JobLocation,
+                    j.JobUrl,
+                    j.JobDescription,
+                    j.JobSalary,
+                    j.JobDatePosted,
+                    j.JobNotes,
+                    j.IsAvailable,
+                    j.SiteId,
+                    j.QueryId,
+                    SiteName = j.Site != null ? j.Site.SiteName : "Job Site" // Handle null Site safely
+                })
                 .ToListAsync();
 
             if (jobs == null || !jobs.Any()) 
             {
                 // It's okay to return empty list if no jobs found, users might want to re-scrape
-                return Ok(new List<ScrapedJob>());
+                return Ok(new List<object>());
             }
             
             return Ok(jobs);
