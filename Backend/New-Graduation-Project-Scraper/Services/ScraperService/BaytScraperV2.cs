@@ -178,6 +178,39 @@ namespace ScraperAPI.Services.ScraperService
                                     JobDatePosted = dateElement.GetString(); // Returns "2025-01-11"
                                     _logger.LogInformation($"JSON-LD Date Found: {JobDatePosted}");
                                 }
+                                
+                                // Extract Salary
+                                if (doc.RootElement.TryGetProperty("baseSalary", out var salaryElement))
+                                if (doc.RootElement.TryGetProperty("baseSalary", out var salaryObj))
+                                {
+                                    string currency = "USD"; // Default for Bayt often
+                                    if (salaryObj.TryGetProperty("currency", out var curr)) currency = curr.GetString();
+                                    
+                                    if (salaryObj.TryGetProperty("value", out var valObj)) 
+                                    {
+                                        string unit = "";
+                                        if (valObj.TryGetProperty("unitText", out var u)) unit = u.GetString();
+
+                                        // Case A: value is an object (minValue/maxValue)
+                                        if (valObj.ValueKind == System.Text.Json.JsonValueKind.Object)
+                                        {
+                                            string min = "", max = "";
+                                            if (valObj.TryGetProperty("minValue", out var minE)) min = minE.ToString();
+                                            if (valObj.TryGetProperty("maxValue", out var maxE)) max = maxE.ToString();
+                                            if (valObj.TryGetProperty("value", out var vE)) min = vE.ToString(); // Sometimes 'value' is direct in object
+
+                                            JobSalary = $"{currency} {min} - {max}".Trim();
+                                        }
+                                        // Case B: value is a direct value (number or string)
+                                        else 
+                                        {
+                                            JobSalary = $"{currency} {valObj}".Trim();
+                                        }
+
+                                        if (!string.IsNullOrEmpty(unit)) JobSalary += $" per {unit.ToLower()}";
+                                    }
+                                    _logger.LogInformation($"Extracted Salary (JSON-LD): {JobSalary}");
+                                }
                             }
                         }
                     }
@@ -209,7 +242,7 @@ namespace ScraperAPI.Services.ScraperService
                     }
 
                     // STRATEGY 2: Extract Skills for "JobNotes"
-                    string JobSkills = "No specific skills extracted.";
+                    string JobSkills = "Skills not specified";
                     
                     // A. Try JSON-LD "skills"
                     try 

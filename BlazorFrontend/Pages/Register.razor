@@ -143,7 +143,7 @@
                 Errors["UserEmail"] = "Email is required.";
                 isValid = false;
             }
-            else if (!Regex.IsMatch(profile.UserEmail, @"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$"))
+            else if (!Regex.IsMatch(profile.UserEmail, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
             {
                 Errors["UserEmail"] = "Invalid email format.";
                 isValid = false;
@@ -178,9 +178,9 @@
             if (!isValid) return;
 
             await Api.Register(profile);
-            success = "Account created! Redirecting...";
-            await Task.Delay(2000);
-            Nav.NavigateTo("/");
+            success = "Account created! Please verify your account. Redirecting...";
+            await Task.Delay(2500);
+            Nav.NavigateTo($"/verify-account?EmailParam={profile.UserEmail}");
         }
         catch (Exception ex) 
         { 

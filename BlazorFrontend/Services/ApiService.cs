@@ -30,7 +30,7 @@ namespace BlazorFrontend.Services
             OnAuthStateChanged?.Invoke();
         }
 
-        public async Task<bool> Login(string email, string password)
+        public async Task<(bool Success, string Message)> Login(string email, string password)
         {
             // Endpoint: api/UserManagement/Login
             var path = $"{BaseUrl}/api/UserManagement/Login";
@@ -38,17 +38,29 @@ namespace BlazorFrontend.Services
             try 
             {
                 var response = await _http.PostAsJsonAsync(path, new { Email = email, Password = password });
+                
                 if (response.IsSuccessStatusCode)
                 {
                     CurrentUser = await response.Content.ReadFromJsonAsync<UserProfile>();
                     OnAuthStateChanged?.Invoke();
-                    return true;
+                    return (true, "Login successful");
                 }
-                return false;
+
+                // Try to read the error message from the backend
+                var errorMsg = await response.Content.ReadAsStringAsync();
+                
+                // If it's 403 (Forbidden), it's likely the verification error
+                if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                {
+                     // Clean up quotes if simple string is returned
+                     return (false, string.IsNullOrWhiteSpace(errorMsg) ? "Please verify your account." : errorMsg.Trim('"'));
+                }
+                
+                return (false, "Invalid email or password");
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                return (false, "Connection error: " + ex.Message);
             }
         }
 
@@ -78,6 +90,23 @@ namespace BlazorFrontend.Services
             }
             
             return await response.Content.ReadAsStringAsync();
+        }
+
+        public async Task<string> VerifyAccount(string email, string code)
+        {
+             // Endpoint: api/ProfileSettings/VerifyAccount
+            var path = $"{BaseUrl}/api/ProfileSettings/VerifyAccount";
+            var RequestBody = new { Email = email, Code = code };
+            
+            var response = await _http.PostAsJsonAsync(path, RequestBody);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                 var errorContent = await response.Content.ReadAsStringAsync();
+                 throw new Exception(string.IsNullOrWhiteSpace(errorContent) ? "Verification failed" : errorContent.Trim('"'));
+            }
+            
+            return "Account verified successfully";
         }
 
         public async Task<List<ScrapedJob>> SearchJobs(JobQuery query)
@@ -280,6 +309,15 @@ namespace BlazorFrontend.Services
             {
                 return new List<string>();
             }
+        }
+        public async Task ResendVerificationCode(string email)
+        {
+             var response = await _http.PostAsync($"{BaseUrl}/api/ProfileSettings/ResendVerificationCode?email={email}", null);
+             if (!response.IsSuccessStatusCode)
+             {
+                 var error = await response.Content.ReadAsStringAsync();
+                 throw new Exception(error);
+             }
         }
     }
 }

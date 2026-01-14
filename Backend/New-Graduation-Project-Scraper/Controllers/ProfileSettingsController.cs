@@ -6,6 +6,7 @@ using ScraperAPI.Models;
 using System.Runtime.CompilerServices;
 using WebApplication1.Models;
 using System.Text.RegularExpressions;
+using ScraperAPI.Services.VerificationService;
 
 namespace ScraperAPI.Controllers
 {
@@ -16,10 +17,12 @@ namespace ScraperAPI.Controllers
         // depedancy injection (to secure the connection between the db and api):
         private readonly ILogger<ProfileSettingsController> _logger;
         private readonly ScrapingEngineDbContext _dbContext;
-        public ProfileSettingsController(ILogger<ProfileSettingsController> logger,ScrapingEngineDbContext dbContext)
+        private readonly IVerificationService _vEngine;
+        public ProfileSettingsController(ILogger<ProfileSettingsController> logger,ScrapingEngineDbContext dbContext, IVerificationService vEngine)
         {
             _logger = logger;
             _dbContext = dbContext;
+            _vEngine = vEngine;
         }
 
         [HttpPost("CreateUserProfile")] 
@@ -49,7 +52,7 @@ namespace ScraperAPI.Controllers
             }
 
             // 3. Validate Email (Regex)
-            string EmailPattern = @"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$";
+            string EmailPattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
             if (string.IsNullOrWhiteSpace(request.UserEmail) || !Regex.IsMatch(request.UserEmail, EmailPattern))
             {
                 _logger.LogError($"Invalid email format: {request.UserEmail}");
@@ -97,11 +100,54 @@ namespace ScraperAPI.Controllers
                 UserPassword = request.UserPassword,
                 CreationDate = DateTime.UtcNow
             };
-
+            
             _dbContext.Users.Add(DbUser); // add the user object to the db
             await _dbContext.SaveChangesAsync(); // update the db
-            _logger.LogInformation($"new user profile with ID ({DbUser.UserId}) was created successfully"); // log the result in the server terminal interface
-            return Ok($"the user profile with ID ({DbUser.UserId}) was created successfully"); // return positive result (200 ok) to the client
+            
+            //verify the account:
+            var code = await _vEngine.GenerateVerificationCodeAsync(request.UserEmail);
+            if (code != null)
+            {
+                var emailSent = await _vEngine.SendVerificationCodeAsync(request.UserEmail);
+                if (emailSent == false)
+                {
+                    _logger.LogError($"Assuming email failure for {request.UserEmail}. User created but email not sent.");
+                    // Return 500 Internal Server Error so the frontend knows something went wrong
+                    // Or bad request if you prefer, but 500 implies system failure (SMTP)
+                    return StatusCode(500, "User registered, but failed to send verification email. Please check your email settings or contact support.");
+                }
+            }
+            _logger.LogInformation($"new user profile with ID ({DbUser.UserId}) was created successfully, waiting for verification"); // log the result in the server terminal interface
+            return Ok($"the user profile with ID ({DbUser.UserId}) was created successfully, please check your email to verify the account"); // return positive result (200 ok) to the client
+        }
+
+        [HttpPost("VerifyAccount")]
+        public async Task<IActionResult> VerifyAccountAsync([FromBody] VerifyUserAccountRequest request)
+        {
+            // verification check:
+            var IsVerified = await _vEngine.CheckVerificationCodeAsync(request.Email, request.Code);
+            if(IsVerified != true)
+            {
+                _logger.LogError($"User with email ({request.Email}) did not verify it's account");
+                return BadRequest("Invalid or expired verification code.");
+            }
+
+            return Ok("Account activated successfully!");
+        }
+        [HttpPost("ResendVerificationCode")]
+        public async Task<IActionResult> ResendVerificationCode([FromQuery] string email)
+        {
+            if (string.IsNullOrWhiteSpace(email)) return BadRequest("Email is required.");
+
+            // 1. Generate new code (updates DB)
+            var code = await _vEngine.GenerateVerificationCodeAsync(email);
+            if (code == null) return BadRequest("Failed to generate code. User may not exist.");
+
+            // 2. Send email
+            var sent = await _vEngine.SendVerificationCodeAsync(email);
+            if (sent != true) return StatusCode(500, "Failed to send email.");
+
+            return Ok("Verification code resent successfully.");
         }
     }
 }

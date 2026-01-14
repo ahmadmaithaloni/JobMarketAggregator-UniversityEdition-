@@ -3,189 +3,327 @@ using Microsoft.Playwright;
 using ScraperAPI.Services.ScraperService;
 using WebApplication1.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Text.RegularExpressions;
 
 namespace ScraperAPI.Services.ScraperService
 {
     public class ReedScraper : IScraperService
     {
-        public string ScraperName => "Reed"; // scraper name
-        // inject the logger:
+        public string ScraperName => "Reed";
         private readonly ILogger<ReedScraper> _logger;
         private readonly ScrapingEngineDbContext _dbContext;
+
         public ReedScraper(ILogger<ReedScraper> logger, ScrapingEngineDbContext dbContext)
         {
             _logger = logger;
             _dbContext = dbContext;
         }
 
-        // Scraping Method:
         public async Task<List<ScrapedJob>> ScraperAsync(JobQuery Query)
         {
-            // 1. fetch the JobName and JobDetails from the query:
+            // 1. Setup
             int QueryID = Query.QueryId;
             string QJobName = Query.QjobName;
             string QJobLocation = Query.QjobLocation;
-            
-            // 2 . setup the the playwright browser:
+
+            // 2. Browser Lauch
             using var PlayWright = await Playwright.CreateAsync();
-            await using var Browser = await PlayWright.Chromium.LaunchAsync(
-                new BrowserTypeLaunchOptions
-                {
-                    Headless = false, // can change to see what happened
-                    Channel = "chrome",
-                    Args = new[] 
-                    {
-                        // disable AutomationControlled feature that can detect playwright:
-                        "--disable-blink-features=AutomationControlled", 
-                        // disable browser isolation:
-                        "--no-sandbox"
-                    }
-                }
-            );
-            // 3. initial the browser context with spoofed user agent:
-            var Context = await Browser.NewContextAsync(
-                new BrowserNewContextOptions
-                {
-                    UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                    ViewportSize = new ViewportSize { Width = 1920, Height = 1080 }
-                }
-            );
+            await using var Browser = await PlayWright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
+            {
+                Headless = false, 
+                Channel = "chrome",
+                Args = new[] { "--disable-blink-features=AutomationControlled", "--no-sandbox" }
+            });
+
+            var Context = await Browser.NewContextAsync(new BrowserNewContextOptions
+            {
+                UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                ViewportSize = new ViewportSize { Width = 1920, Height = 1080 }
+            });
             var page = await Context.NewPageAsync();
-            // 4. create empty Jobs List to fill it up with scraped jobs & list of string job links:
+
             List<ScrapedJob> ScrapedJobs = new List<ScrapedJob>();
             List<string> JobLinks = new List<string>();
-            // 5. put the scraping logic in try block:
+
             try
             {
-                // 6. construct the initial search url for Reed.co.uk and navigate to it:
-                string? Url = $"https://www.reed.co.uk/";
+                // 3. Direct URL Navigation (V2 Style)
+                // Clean inputs: replace spaces with hyphens, lowercase
+                string cleanJob = Uri.EscapeDataString(QJobName.ToLower().Trim()).Replace("%20", "-").Replace(" ", "-");
+                string cleanLoc = Uri.EscapeDataString(QJobLocation.ToLower().Trim()).Replace("%20", "-").Replace(" ", "-");
+                
+                string Url = $"https://www.reed.co.uk/jobs/{cleanJob}-jobs-in-{cleanLoc}";
+                _logger.LogInformation($"Navigating to Reed URL: {Url}");
+                
                 await page.GotoAsync(Url);
-                // 7. locate the accept button if exist or not:
+
+                // Handle Cookie Banner (if present)
                 try 
                 {
-                    // Wait briefly for the banner to appear
-                    await page.WaitForSelectorAsync("#onetrust-accept-btn-handler", new PageWaitForSelectorOptions { Timeout = 5000 });
-                    var AcceptTermsBtn = page.Locator("#onetrust-accept-btn-handler");
-                    
-                    if (await AcceptTermsBtn.CountAsync() > 0 && await AcceptTermsBtn.IsVisibleAsync())
+                     await page.WaitForSelectorAsync("#onetrust-accept-btn-handler", new PageWaitForSelectorOptions { Timeout = 4000 });
+                     if (await page.IsVisibleAsync("#onetrust-accept-btn-handler"))
+                        await page.ClickAsync("#onetrust-accept-btn-handler");
+                }
+                catch {}
+
+                // 4. Pagination & Link Collection Strategy (Direct URL Navigation)
+                int maxPages = 2; // Exact user request: "not more than 2 sites" and "at least 50 jobs" (25*2)
+                
+                string baseSearchUrl = page.Url;
+                if (baseSearchUrl.Contains("?")) baseSearchUrl = baseSearchUrl.Split('?')[0];
+
+                for (int i = 1; i <= maxPages; i++)
+                {
+                    string pageUrl = i == 1 ? baseSearchUrl : $"{baseSearchUrl}?pageno={i}";
+                    _logger.LogInformation($"Scraping Reed Page {i}: {pageUrl}");
+
+                    try 
                     {
-                        // 8. click to pass the test:
-                        await AcceptTermsBtn.ClickAsync();
-                        await Task.Delay(1000); // Wait for banner to disappear
+                        if (page.Url != pageUrl)
+                        {
+                            await page.GotoAsync(pageUrl, new PageGotoOptions { Timeout = 15000, WaitUntil = WaitUntilState.DOMContentLoaded });
+                        }
+
+                        // A. Anti-Freeze: Dynamic Wait
+                        try {
+                            await page.WaitForSelectorAsync("a[href*='/jobs/']", new PageWaitForSelectorOptions { Timeout = 5000 });
+                        } catch { 
+                            _logger.LogWarning($"Page {i} load wait timeout (proceeding anyway).");
+                        }
+
+                        // B. Scroll for Lazy Loading
+                        await page.EvaluateAsync("window.scrollTo(0, document.body.scrollHeight)");
+                        await Task.Delay(1000);
+
+                        // C. Robust Link Collection
+                        var allAnchors = await page.QuerySelectorAllAsync("a");
+                        int newLinksCount = 0;
+                        foreach (var anchor in allAnchors)
+                        {
+                            if(JobLinks.Count >= 60) break; // Buffer limit
+
+                            string? Href = await anchor.GetAttributeAsync("href");
+                            if (!string.IsNullOrEmpty(Href) && Href.Contains("/jobs/") && !Href.Contains("/jobs/search"))
+                            {
+                                if (Regex.IsMatch(Href, @"/jobs/[^/]+/\d+"))
+                                {
+                                    string FullUrl = Href.StartsWith("http") ? Href : "https://www.reed.co.uk" + Href;
+                                    if (!JobLinks.Contains(FullUrl)) 
+                                    {
+                                        JobLinks.Add(FullUrl);
+                                        newLinksCount++;
+                                    }
+                                }
+                            }
+                        }
+                        _logger.LogInformation($"Page {i} yielded {newLinksCount} new jobs. Total: {JobLinks.Count}");
+                        
+                        // If no new links found on page 2, break (end of results)
+                        if (i > 1 && newLinksCount == 0) break;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError($"Error on Page {i}: {ex.Message}");
                     }
                 }
-                catch { _logger.LogError($"Banner did not appear, continue");}
-                // 9. locate the job search box and check if it exist or not:
-                // Wait for the search box to be clickable (after banner is gone)
-                try {
-                    await page.WaitForSelectorAsync("#main-keywords", new PageWaitForSelectorOptions { Timeout = 10000 });
-                } catch { _logger.LogWarning("Search box detection timed out"); }
-                var SearchInput = page.Locator("input[id='main-keywords']").First; 
-                // 10. type in the search box:
-                _logger.LogInformation($"the searchbox from Reed.co.uk are now under typing process : searched topic : {QJobName}"); 
-                await SearchInput.ClickAsync(); // click to activate the job search box
-                await SearchInput.FillAsync(QJobName); // inject the user query in the search text
-                // 11. check if the QJobLocation is empty or not:
-                if (string.IsNullOrEmpty(QJobLocation))
-                {
-                    _logger.LogError("the job location field is empty, this field needed for Reed.co.uk");
-                    return ScrapedJobs; // empty list 
-                }
-                // 12. locate the country selection box:
-                var LocationInput = page.Locator("input[id='main-location']").First;
-                // 13. check if it is empty, and try with placeholder: 
-                if (await LocationInput.CountAsync() == 0)
-                {
-                    LocationInput = page.GetByPlaceholder("town or postcode");
-                }
-                await LocationInput.ClickAsync(); // activate the country selection box
-                await LocationInput.ClearAsync(); // Clear existing text first
-                await Task.Delay(500); // add behavioural delay to mimic the user actions
-                await page.Keyboard.TypeAsync(QJobLocation); // keyboard using treck...
-                await Task.Delay(1000); // add another delay 
-                // 14. press enter:
-                await page.Keyboard.PressAsync("Enter");
-                // 15. another enter after delay to confirm the search:
-                await Task.Delay(500);
-                // 16. wait for the results:
-                _logger.LogInformation("Search submitted. Waiting for results...");
-                try {
-                    await page.WaitForSelectorAsync("article.job-result", new PageWaitForSelectorOptions { Timeout = 15000 });
-                } catch { _logger.LogWarning("No job cards found."); }
-                // 17. scroll to trigger lazy loading:
-                for (int i = 0; i < 5; i++)
-                {
-                    await page.Keyboard.PressAsync("PageDown"); // Keyboard is better than Mouse.Wheel here
-                    await Task.Delay(1000); 
-                }                
-                // 18. collect job links in one collection of link elements (array):
-                var LinkElements = await page.QuerySelectorAllAsync("article.job-result h3.title a");
-                if (LinkElements.Count == 0) LinkElements = await page.QuerySelectorAllAsync("h2 a"); // Fallback
-                foreach (var element in LinkElements)
-                {
-                    string? Href = await element.GetAttributeAsync("href");
-                    if (!string.IsNullOrEmpty(Href))
-                    {
-                        // Extract full URL (if needed):
-                        string FullUrl = Href.StartsWith("http") ? Href : "https://www.reed.co.uk" + Href;
-                        // prevent duplication:
-                        if (!JobLinks.Contains(FullUrl)) JobLinks.Add(FullUrl);
-                    }
-                }
-                _logger.LogInformation($"Found {JobLinks.Count} links on Reed.");
-                // 19. visit each job link and collect the data from it:
+
+                _logger.LogInformation($"Collected {JobLinks.Count} job links.");
+
+                // 5. Scrape Details (JSON-LD Extraction)
                 int counter = 1;
-                int WebsiteID = _dbContext.JobSites.FirstOrDefaultAsync(w => w.SiteName == "Reed.co.uk").Id;
+                // Get Site ID
+                var site = await _dbContext.JobSites.FirstOrDefaultAsync(w => w.SiteName.Contains("Reed"));
+                int WebsiteID = site?.SiteId ?? 2;
+
                 foreach (var link in JobLinks)
                 {
                     try
                     {
-                        // 20. mark the visited link from all grabed links:
-                        _logger.LogInformation($"link ({counter}/{JobLinks.Count}): ({link})");
-                        // 21. visit the link:
-                        await page.GotoAsync(link);
-                        await page.WaitForLoadStateAsync(LoadState.DOMContentLoaded); // dynamic timer to wait the content   
-                        // 22. grab the title:
-                        var TitleElement = await page.QuerySelectorAsync("header h1") ?? await page.QuerySelectorAsync("h1");
-                        string JobTitle = TitleElement != null ? await TitleElement.InnerTextAsync() : QJobName ?? "Unknown";
-                        // 23. grab the job description:
-                        var DescriptionElement = await page.QuerySelectorAsync("div[class*='description']") ?? await page.QuerySelectorAsync("#jobDescription");
-                        string JobDescription = DescriptionElement != null ? await DescriptionElement.InnerTextAsync() : "description does not found";
-                        // 24. grab the job location:
-                        var LocationItem = await page.QuerySelectorAsync("span[itemprop='addressLocality']") ?? await page.QuerySelectorAsync("div[class*='location'] span");
-                        string LocationValue = LocationItem != null ? await LocationItem.InnerTextAsync() : QJobLocation;
-                        // 25. replace the dot with comma in JobLocation value (bayt manipulation):
-                        if (LocationValue.Contains("."))
+                        _logger.LogInformation($"Scraping ({counter}/{JobLinks.Count}): {link}");
+                        await page.GotoAsync(link, new PageGotoOptions { Timeout = 20000, WaitUntil = WaitUntilState.DOMContentLoaded });
+
+                        // Default Values
+                        string JobTitle = QJobName; 
+                        string JobDescription = "Description not found";
+                        string LocationValue = QJobLocation;
+                        string JobDatePosted = "Not Specified";
+                        string JobSalary = "Not Specified";
+                        string JobSkills = "See description"; // Will try to extract
+
+                        string? jsonLd = null;
+
+                        // A. Try JSON-LD Extraction
+                        try 
                         {
-                            LocationValue = LocationValue.Replace(".", ",").Trim();
+                            jsonLd = await page.EvaluateAsync<string>(@"() => {
+                                const scripts = document.querySelectorAll('script[type=""application/ld+json""]');
+                                for(let s of scripts) {
+                                    if(s.innerText.includes('JobPosting')) return s.innerText;
+                                }
+                                return null;
+                            }");
+
+                            if (!string.IsNullOrEmpty(jsonLd))
+                            {
+                                using (var doc = System.Text.Json.JsonDocument.Parse(jsonLd))
+                                {
+                                    var root = doc.RootElement;
+                                    
+                                    // Title
+                                    if(root.TryGetProperty("title", out var t)) JobTitle = t.GetString() ?? JobTitle;
+                                    
+                                    // Description
+                                    if(root.TryGetProperty("description", out var d)) 
+                                    {
+                                        JobDescription = Regex.Replace(d.GetString() ?? "", "<.*?>", " ").Trim(); // Strip HTML
+                                    }
+
+                                    // Location
+                                    if (root.TryGetProperty("jobLocation", out var locObj))
+                                    {
+                                        if (locObj.TryGetProperty("address", out var addrObj))
+                                        {
+                                            string region = "", locality = "";
+                                            if (addrObj.TryGetProperty("addressRegion", out var r)) region = r.GetString();
+                                            if (addrObj.TryGetProperty("addressLocality", out var l)) locality = l.GetString();
+                                            LocationValue = $"{locality}, {region}".Trim(',').Trim();
+                                        }
+                                    }
+
+                                    // Date Posted
+                                    if (root.TryGetProperty("datePosted", out var dateEl)) JobDatePosted = dateEl.GetString();
+
+                                    // Salary (The Goal!)
+                                    if (root.TryGetProperty("baseSalary", out var salaryObj))
+                                    {
+                                        if (salaryObj.TryGetProperty("value", out var valObj)) 
+                                        {
+                                            string currency = "GBP";
+                                            if (salaryObj.TryGetProperty("currency", out var curr)) currency = curr.GetString();
+                                            
+                                            string unit = "";
+                                            if (valObj.TryGetProperty("unitText", out var u)) unit = u.GetString(); // e.g. "YEAR", "HOUR"
+
+                                            // Handle Object (Min/Max) or Value
+                                            if (valObj.ValueKind == System.Text.Json.JsonValueKind.Object)
+                                            {
+                                                 string min="", max="";
+                                                 if (valObj.TryGetProperty("minValue", out var minE)) min = minE.ToString();
+                                                 if (valObj.TryGetProperty("maxValue", out var maxE)) max = maxE.ToString();
+                                                 if (valObj.TryGetProperty("value", out var vE)) min = vE.ToString(); 
+                                                 
+                                                 JobSalary = $"{currency} {min} - {max}".Trim();
+                                            }
+                                            else 
+                                            {
+                                                JobSalary = $"{currency} {valObj}";
+                                            }
+
+                                            if (!string.IsNullOrEmpty(unit)) JobSalary += $" per {unit.ToLower()}";
+                                        }
+                                    }
+
+                                    // Skills
+                                    if (root.TryGetProperty("skills", out var skillsEl))
+                                    {
+                                         if (skillsEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+                                            JobSkills = string.Join(", ", skillsEl.EnumerateArray().Select(x => x.GetString()));
+                                         else
+                                            JobSkills = skillsEl.GetString();
+                                    }
+                                }
+                            }
                         }
-                        // 26. add the job to the scraped jobs list:
+                        catch (Exception ex) { _logger.LogWarning($"JSON Parse Error: {ex.Message}"); }
+
+                        // B. Fallback/Enhancement: Visual Extraction for Skills 
+                        // (If JSON missed it or we want specifically the "Required Skills" list)
+                        if (string.IsNullOrEmpty(JobSkills) || JobSkills.Contains("See description"))
+                        {
+                            try 
+                            {
+                                // Try to find a header meant for skills
+                                var skillsHeader = await page.QuerySelectorAsync("strong:has-text('Skills'), strong:has-text('Requirements'), h3:has-text('Skills'), h3:has-text('Requirements')");
+                                if (skillsHeader == null) 
+                                {
+                                    // Try searching text content via XPath if CSS fails
+                                    var xpathHeaders = await page.QuerySelectorAllAsync("//*[contains(text(), 'Required Skills') or contains(text(), 'Requirements') or contains(text(), 'Qualifications')]");
+                                    if (xpathHeaders.Any()) skillsHeader = xpathHeaders.Last(); // Often the last one is the main one
+                                }
+
+                                if (skillsHeader != null)
+                                {
+                                    // Look for the next siblings until a UL is found
+                                    var nextSibling = await skillsHeader.EvaluateHandleAsync("el => el.nextElementSibling");
+                                    var limit = 0;
+                                    while (nextSibling != null && limit < 3) 
+                                    {
+                                        var tagName = await nextSibling.EvaluateAsync<string>("el => el.tagName");
+                                        if (tagName == "UL") 
+                                        {
+                                            var elementHandle = nextSibling.AsElement();
+                                            if (elementHandle != null)
+                                            {
+                                                var items = await elementHandle.QuerySelectorAllAsync("li");
+                                                var skillList = new List<string>();
+                                                foreach(var item in items) 
+                                                {
+                                                    skillList.Add(await item.InnerTextAsync());
+                                                }
+                                                if (skillList.Any()) 
+                                                {
+                                                    JobSkills = string.Join("; ", skillList.Take(10));
+                                                    _logger.LogInformation($"Extracted {skillList.Count} visual skills.");
+                                                }
+                                            }
+                                            break;
+                                        }
+                                        nextSibling = await nextSibling.EvaluateHandleAsync("el => el.nextElementSibling");
+                                        limit++;
+                                    }
+                                }
+                            }
+                            catch (Exception px) { _logger.LogWarning($"Visual Skills Scratch Error: {px.Message}"); }
+                        }
+
+                        // C. Fallback for Title
+                        if (JobTitle == QJobName)
+                        {
+                            var h1 = await page.QuerySelectorAsync("h1");
+                            if (h1 != null) JobTitle = await h1.InnerTextAsync();
+                        }
+
+                        // Freshness Check (Active < 1 year)
+                        bool isJobActive = true;
+                        if (DateTime.TryParse(JobDatePosted, out DateTime pDate))
+                        {
+                             if (pDate < DateTime.Now.AddYears(-1)) isJobActive = false;
+                        }
+
                         ScrapedJobs.Add(new ScrapedJob
                         {
                             JobName = JobTitle.Trim(),
                             JobUrl = link,
-                            JobLocation = LocationValue.Trim(),
-                            JobDescription = JobDescription.Trim(), 
-                            SiteId = WebsiteID, 
-                            IsAvailable = true,
+                            JobLocation = LocationValue,
+                            JobDescription = JobDescription,
+                            JobSalary = JobSalary.Replace("GBP", "£").Trim(),
+                            JobDatePosted = JobDatePosted,
+                            SiteId = WebsiteID,
+                            IsAvailable = isJobActive,
                             QueryId = QueryID,
-                            JobNotes = "Deep Scraped: Full Details Fetched from Reed.co.uk site"
+                            JobNotes = string.IsNullOrEmpty(JobSkills) || JobSkills == "See description" ? "Skills not specified" : JobSkills
                         });
-                        // 27. update the counter and add delay:
+
                         counter++;
-                        await Task.Delay(1500); // the delay can be change to access more links in less time 
                     }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError($"Reed Scraper Critical Error : {ex.Message}");
-                    }
+                    catch { /* Ignore single job Failures */ }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Failed to scrape data from Reed.co.uk: {ex.Message}");
+                _logger.LogError($"Reed Scraper Critical Fail: {ex.Message}");
             }
-            //28. close the browser (automatic baeause of (using) keyword in browser implementation) and return the jobs:
+
             return ScrapedJobs;
         }
     }

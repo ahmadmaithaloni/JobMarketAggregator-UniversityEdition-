@@ -249,7 +249,7 @@
 
             // Validate Email
             if (string.IsNullOrWhiteSpace(editEmail)) { Errors["Email"] = "Email is required."; isValid = false; }
-            else if (!Regex.IsMatch(editEmail, @"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$")) { Errors["Email"] = "Invalid email format."; isValid = false; }
+            else if (!Regex.IsMatch(editEmail, @"^[^@\s]+@[^@\s]+\.[^@\s]+$")) { Errors["Email"] = "Invalid email format."; isValid = false; }
 
             // Validate Password (if changed)
             if (!string.IsNullOrWhiteSpace(editPassword) && !Regex.IsMatch(editPassword, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$"))

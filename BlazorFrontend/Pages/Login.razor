@@ -56,6 +56,12 @@
         {
             <div style="background-color: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444; font-size: 0.9rem; padding: 0.75rem; border-radius: var(--radius); margin-bottom: 1.5rem; text-align: center;">
                 @GlobalError
+                @if (GlobalError.Contains("verify", StringComparison.OrdinalIgnoreCase))
+                {
+                    <div style="margin-top: 0.5rem;">
+                        <a href="verify-account?EmailParam=@email&AutoResend=true" style="color: #ef4444; font-weight: 700; text-decoration: underline;">Verify Now</a>
+                    </div>
+                }
             </div>
         }
 
@@ -88,20 +94,20 @@
         bool isValid = true;
         if (string.IsNullOrWhiteSpace(email)) { Errors["Email"] = "Email is required"; isValid = false; }
         // Simple valid email check on login (optional but good for UX)
-        else if (!Regex.IsMatch(email, @"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$")) { Errors["Email"] = "Invalid email format"; isValid = false; }
+        else if (!Regex.IsMatch(email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$")) { Errors["Email"] = "Invalid email format"; isValid = false; }
 
         if (string.IsNullOrWhiteSpace(password)) { Errors["Password"] = "Password is required"; isValid = false; }
 
         if (!isValid) { isLoading = false; return; }
 
-        bool success = await Api.Login(email, password);
-        if (success)
+        var result = await Api.Login(email, password);
+        if (result.Success)
         {
             Nav.NavigateTo("/dashboard");
         }
         else
         {
-            GlobalError = "Invalid email or password";
+            GlobalError = result.Message;
         }
         
         isLoading = false;

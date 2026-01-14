@@ -1,0 +1,101 @@
+@using System.Timers
+
+<div class="autocomplete-wrapper" style="position: relative; width: 100%;">
+    <!-- Location Icon -->
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" 
+         style="position: absolute; left: 1rem; top: 1.6rem; transform: translateY(-50%); z-index: 2; color: var(--text-muted); pointer-events: none;">
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+    </svg>
+
+    <!-- Input Field -->
+    <input value="@Value"
+           @oninput="OnInput"
+           @onfocus="OpenDropdown"
+           @onblur="CloseDropdown"
+           class="form-control"
+           placeholder="@Placeholder"
+           style="padding-left: 2.8rem; padding-top: 1rem; padding-bottom: 1rem; font-size: 1rem; border-radius: 8px; width: 100%; transition: all 0.2s;" />
+
+    <!-- Dropdown List -->
+    @if (isOpen && FilteredLocations.Any())
+    {
+        <div class="custom-dropdown fade-in-fast" style="position: absolute; top: 105%; left: 0; right: 0; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow); max-height: 300px; overflow-y: auto; z-index: 1000;">
+            @foreach (var loc in FilteredLocations)
+            {
+                <div class="dropdown-item" @onmousedown="() => Select(loc)" style="padding: 0.75rem 1rem; cursor: pointer; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: 0.5rem; transition: background 0.1s;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted);"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <span style="color: var(--text-main);">@loc</span>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .dropdown-item:hover {
+        background-color: rgba(var(--primary-rgb), 0.05);
+        color: var(--primary-color);
+    }
+    .dropdown-item:last-child {
+        border-bottom: none;
+    }
+    .fade-in-fast {
+        animation: fadeIn 0.1s ease-out;
+    }
+</style>
+
+@code {
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public List<string> Locations { get; set; } = new();
+    [Parameter] public string Placeholder { get; set; } = "e.g. Amman";
+
+    private bool isOpen = false;
+    private List<string> FilteredLocations = new();
+
+    private void OnInput(ChangeEventArgs e)
+    {
+        var input = e.Value?.ToString() ?? "";
+        Value = input;
+        ValueChanged.InvokeAsync(Value);
+        
+        FilterLocations(input);
+        isOpen = true;
+    }
+
+    private void OpenDropdown()
+    {
+        FilterLocations(Value);
+        isOpen = true;
+    }
+
+    private async Task CloseDropdown()
+    {
+        // Small delay to allow click event to register
+        await Task.Delay(150);
+        isOpen = false;
+        StateHasChanged();
+    }
+
+    private void FilterLocations(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            FilteredLocations = Locations;
+        }
+        else
+        {
+            FilteredLocations = Locations
+                .Where(l => l.Contains(input, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(l => l.IndexOf(input, StringComparison.OrdinalIgnoreCase)) // Prioritize starts-with
+                .ToList();
+        }
+    }
+
+    private async Task Select(string loc)
+    {
+        Value = loc;
+        await ValueChanged.InvokeAsync(Value);
+        isOpen = false;
+    }
+}

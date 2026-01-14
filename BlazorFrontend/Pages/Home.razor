@@ -1,6 +1,7 @@
 ﻿@page "/dashboard"
 @inject ApiService Api
 @inject NavigationManager Nav
+@using BlazorFrontend.Components
 
 <div class="container fade-in">
     @if (Api.CurrentUser == null)
@@ -32,16 +33,7 @@
                     
                     <div style="flex: 1; min-width: 250px; text-align: left;">
                         <label class="input-label" style="font-size: 0.9rem;">Location</label>
-                         <div style="position: relative;">
-                            <input @bind="query.Location" list="locationList" class="form-control" placeholder="e.g. Jordan" style="padding-left: 2.8rem; padding-top: 1rem; padding-bottom: 1rem; font-size: 1rem; border-radius: 8px;" />
-                            <datalist id="locationList">
-                                @foreach (var loc in availableLocations)
-                                {
-                                    <option value="@loc"></option>
-                                }
-                            </datalist>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                        </div>
+                        <LocationAutocomplete @bind-Value="query.Location" Locations="availableLocations" Placeholder="e.g. Jordan" />
                     </div>
                 </div>
                 <button class="btn btn-primary" @onclick="Search" disabled="@isLoading" style="margin-top: 1.5rem; width: 100%; padding: 1rem; font-size: 1.1rem; border-radius: 8px; font-weight: 700;">

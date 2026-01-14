@@ -36,6 +36,13 @@ namespace ScraperAPI.Controllers
                 _logger.LogWarning($"Login failed: User not found or wrong password for email {request.Email}");
                 return NotFound("Invalid email or password.");
             }
+
+            // check for account verification:
+            if(user != null && !user.IsVerified)
+            {
+                _logger.LogError($"user with email ({request.Email}) cannot login, he should verified it's account first");
+                return StatusCode(403, "Please verify your account first. Check your email.");
+            }
             // log and return the user info:
             _logger.LogInformation($"Login successful for user: {user.UserName} ({user.UserId})");
             return Ok(user);
@@ -165,7 +172,7 @@ namespace ScraperAPI.Controllers
                 return BadRequest($"the entered password is not correct, please retry again later ...");
             }
             // check if the entered email address follows the email address standards or not (validation phase 4):
-            string EmailPattern = @"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$";
+            string EmailPattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
             if (!Regex.IsMatch(request.UserNewEmail, EmailPattern))
             {
                 _logger.LogError($"the user ({request.UserID} tried to enter invalid email address ({request.UserNewEmail}) in the (ChangeEmailAddress) request");

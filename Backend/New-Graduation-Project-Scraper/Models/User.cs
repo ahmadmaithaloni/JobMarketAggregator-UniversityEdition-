@@ -37,6 +37,8 @@ public partial class User
 
     [Column(TypeName = "datetime")]
     public DateTime CreationDate { get; set; }
+    public string? VerificationCode {get; set; }
+    public bool IsVerified { get; set; }
 
     [InverseProperty("User")]
     public virtual ICollection<JobQuery> JobQueries { get; set; } = new List<JobQuery>();

@@ -76,16 +76,16 @@
                                             <span style="width: 4px; height: 4px; background: var(--border); border-radius: 50%;"></span>
                                             <span style="display: flex; align-items: center; gap: 0.4rem;">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                                                @job.JobDatePosted 
-                                                <!-- <span style="font-size: 0.7rem; color: red;">(Debug: @job.JobDatePosted)</span> -->
+                                                @GetFriendlyDate(job.JobDatePosted)
                                             </span>
                                         }
                                     </div>
 
                                     @if (!string.IsNullOrEmpty(job.JobSalary) && job.JobSalary != "Not Specified")
                                     {
-                                        <div style="margin-top: 1rem; display: inline-block; padding: 0.25rem 0.75rem; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 20px; font-size: 0.85rem; font-weight: 500;">
-                                            💰 @job.JobSalary
+                                        <div style="margin-top: 1rem; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.75rem; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 20px; font-size: 0.85rem; font-weight: 500;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                                            @FormatSalary(job.JobSalary)
                                         </div>
                                     }
                                 </div>
@@ -274,6 +274,43 @@
         DisplayedJobs = query.ToList();
     }
 
+    private string GetFriendlyDate(string? dateStr)
+    {
+        if (string.IsNullOrWhiteSpace(dateStr) || dateStr == "Not Specified") return "Unknown Date";
+
+        if (DateTime.TryParse(dateStr, out DateTime dt))
+        {
+            var diff = DateTime.Now - dt;
+            if (diff.TotalMinutes < 60) return "Just now";
+            if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
+            if (diff.TotalDays < 2) return "Yesterday";
+            if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d ago";
+            return dt.ToString("MMM dd, yyyy");
+        }
+        return dateStr; // Fallback to original string if parse fails (e.g. "today")
+    }
+
+    private string FormatSalary(string? salary)
+    {
+        if (string.IsNullOrWhiteSpace(salary)) return "";
+        
+        // 1. Normalize GBP
+        var s = salary.Replace("GBP", "£").Replace("£ ", "£");
+
+        // 2. Remove trailing dash if it exists (e.g. "£400 -")
+        s = s.Trim();
+        if (s.EndsWith("-"))
+        {
+            s = s.Substring(0, s.Length - 1).Trim();
+        }
+
+        // 3. Ensure spaces around "per" are kept or normalized
+        // "Per Annum" -> "per annum"
+        if (s.Contains("Annually", StringComparison.OrdinalIgnoreCase)) s = s.Replace("Annually", "per annum");
+        
+        return s; 
+    }
+
     private bool IsDateMatch(string? dateStr, string filter)
     {
         if (string.IsNullOrWhiteSpace(dateStr)) return false;
@@ -288,8 +325,7 @@
         if (filter == "Today")
         {
             if (isToday) return true;
-            // Relaxed: Include today and yesterday (since "24 hours" can cross day boundaries)
-            if (DateTime.TryParse(dateStr, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime dt)) 
+            if (DateTime.TryParse(dateStr, out DateTime dt)) 
             {
                 return dt.Date >= DateTime.Today.AddDays(-1); 
             }
@@ -298,7 +334,7 @@
         if (filter == "Week")
         {
             if (isToday || isYesterday || lowerDate.Contains("day ago")) return true;
-            if (DateTime.TryParse(dateStr, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime dt)) 
+            if (DateTime.TryParse(dateStr, out DateTime dt)) 
             {
                 return dt.Date >= DateTime.Today.AddDays(-7);
             }

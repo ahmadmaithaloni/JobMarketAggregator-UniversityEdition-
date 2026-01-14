@@ -210,6 +210,12 @@ namespace ScraperAPI.Services.LocationMapper_Service
                 return CityToCountryMap[CleanedLocation]; // any user input will be cleaned and matched to the country name and returned in string var
             }
 
+            // check if the input is already a country (reverse lookup):
+            if (CityToCountryMap.Values.Any(v => v.Equals(CleanedLocation, StringComparison.OrdinalIgnoreCase)))
+            {
+                return CityToCountryMap.Values.First(v => v.Equals(CleanedLocation, StringComparison.OrdinalIgnoreCase));
+            }
+
             // if the location is not found in the dictionary, return "international"
             return "international";
 
