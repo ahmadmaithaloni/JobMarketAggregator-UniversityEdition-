@@ -26,7 +26,7 @@ namespace ScraperAPI.Services.ScraperService
             var Browser = await PlayWright.Chromium.LaunchAsync(
                 new BrowserTypeLaunchOptions
                 {
-                    Headless = false, // can change to see what happened
+                    Headless = true, // can change to see what happened
                     Channel= "chrome",
                     Args = new[] 
                     {

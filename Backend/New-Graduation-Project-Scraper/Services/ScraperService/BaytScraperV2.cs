@@ -36,7 +36,7 @@ namespace ScraperAPI.Services.ScraperService
             var Browser = await PlayWright.Chromium.LaunchAsync(
                 new BrowserTypeLaunchOptions
                 {
-                    Headless = false, 
+                    Headless = true, 
                     Channel= "chrome",
                     Args = new[] 
                     {
@@ -114,8 +114,7 @@ namespace ScraperAPI.Services.ScraperService
 
                 if (pagesScraped < maxPages && JobLinks.Count < 60)
                 {
-                    var nextButton = await page.QuerySelectorAsync("li.pagination-next a") 
-                                  ?? await page.QuerySelectorAsync("a[data-js-id='pagination-next']");
+                    var nextButton = await page.QuerySelectorAsync("li.pagination-next a") ?? await page.QuerySelectorAsync("a[data-js-id='pagination-next']");
 
                     if (nextButton != null && await nextButton.IsVisibleAsync())
                     {
@@ -147,8 +146,7 @@ namespace ScraperAPI.Services.ScraperService
                         Timeout = 15000 // Reduced from 30000 to fail faster if site is slow
                     });
                     
-                    var LocationItem = await page.QuerySelectorAsync("ul.list.is-basic li span.t-mute")
-                                     ?? await page.QuerySelectorAsync(".job-detail-header .t-mute");
+                    var LocationItem = await page.QuerySelectorAsync("ul.list.is-basic li span.t-mute") ?? await page.QuerySelectorAsync(".job-detail-header .t-mute");
                     string LocationValue = LocationItem != null ? await LocationItem.InnerTextAsync() : "Unknown";
 
                     var TitleElement = await page.QuerySelectorAsync("#job_title") ?? await page.QuerySelectorAsync("h1");
@@ -225,13 +223,13 @@ namespace ScraperAPI.Services.ScraperService
                          var MetaListItems = await page.QuerySelectorAllAsync("ul.list.is-basic li");
                          foreach (var metaItem in MetaListItems)
                          {
-                             var text = await metaItem.InnerTextAsync();
-                             if (text.Contains("Date Posted")) JobDatePosted = text.Replace("Date Posted:", "").Trim();
-                             else if (text.Contains("Monthly Salary")) JobSalary = text.Replace("Monthly Salary:", "").Trim();
+                            var text = await metaItem.InnerTextAsync();
+                            if (text.Contains("Date Posted")) JobDatePosted = text.Replace("Date Posted:", "").Trim();
+                            else if (text.Contains("Monthly Salary")) JobSalary = text.Replace("Monthly Salary:", "").Trim();
                          }
                     }
 
-                    // Dynamic Status Logic: Mark as Closed if older than 1 year
+                    // dynamic job status:
                     bool isJobActive = true;
                     if (DateTime.TryParse(JobDatePosted, out DateTime parsedDate))
                     {

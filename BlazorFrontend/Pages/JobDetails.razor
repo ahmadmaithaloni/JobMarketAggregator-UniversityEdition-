@@ -82,11 +82,19 @@
                             Key Skills
                         </strong>
                         
-                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                            @foreach (var skill in Api.SelectedJob.JobNotes.Split(new[] { ',', '•', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+                            @foreach (var skillRaw in Api.SelectedJob.JobNotes.Split(new[] { ',', ';', '•', '\n' }, StringSplitOptions.RemoveEmptyEntries))
                             {
-                                <span style="background: var(--bg-surface); border: 1px solid var(--border); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.85rem; font-weight: 500; color: var(--text-main);">
-                                    @skill.Trim()
+                                var skill = skillRaw.Trim();
+                                if (string.IsNullOrWhiteSpace(skill)) continue;
+
+                                bool isLong = skill.Length > 60;
+                                string dynamicStyle = isLong 
+                                    ? "width: 100%; border-radius: 8px; padding: 0.75rem; line-height: 1.5;" // "List item" look for sentences
+                                    : "border-radius: 20px; padding: 0.25rem 0.75rem;"; // "Pill" look for keywords
+
+                                <span style="background: var(--bg-surface); border: 1px solid var(--border); font-size: 0.85rem; font-weight: 500; color: var(--text-main); @dynamicStyle">
+                                    @skill
                                 </span>
                             }
                         </div>

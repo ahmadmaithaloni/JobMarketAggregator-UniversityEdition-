@@ -30,7 +30,7 @@ namespace ScraperAPI.Services.ScraperService
             using var PlayWright = await Playwright.CreateAsync();
             await using var Browser = await PlayWright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
             {
-                Headless = false, 
+                Headless = true, 
                 Channel = "chrome",
                 Args = new[] { "--disable-blink-features=AutomationControlled", "--no-sandbox" }
             });

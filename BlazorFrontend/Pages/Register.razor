@@ -68,8 +68,8 @@
                      @if (Errors.ContainsKey("UserPhone")) { <div class="invalid-feedback">@Errors["UserPhone"]</div> }
                 </div>
                 <div class="input-group">
-                    <label class="input-label" style="margin-left: 2px;">Major <span style="color: var(--text-muted); font-size: 0.8em; font-weight: 400;">(Optional)</span></label>
-                    <input @bind="profile.UserMajor" class="form-control @(Errors.ContainsKey("UserMajor") ? "is-invalid" : "")" placeholder="Computer Science" style="padding: 0.9rem;" />
+                    <label class="input-label" style="margin-left: 2px;">Professional Field <span style="color: var(--text-muted); font-size: 0.8em; font-weight: 400;">(Optional)</span></label>
+                    <input @bind="profile.UserMajor" class="form-control @(Errors.ContainsKey("UserMajor") ? "is-invalid" : "")" placeholder="e.g. Backend Engineer, Data Analyst" style="padding: 0.9rem;" />
                      @if (Errors.ContainsKey("UserMajor")) { <div class="invalid-feedback">@Errors["UserMajor"]</div> }
                 </div>
             </div>
