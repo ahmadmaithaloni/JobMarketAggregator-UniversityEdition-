@@ -1,0 +1,141 @@
+@page "/verify-account"
+@inject ApiService Api
+@inject NavigationManager Nav
+
+<style>
+    .is-invalid {
+        border-color: #ef4444 !important;
+        background-color: rgba(239, 68, 68, 0.05) !important;
+    }
+    .invalid-feedback {
+        color: #ef4444;
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+        margin-left: 2px;
+    }
+</style>
+
+<div class="container fade-in" style="width: 90%; max-width: 420px; padding-top: 6vh; margin: 0 auto;">
+    <div class="card" style="padding: 2.5rem; border: 1px solid var(--border); background: var(--bg-card); box-shadow: var(--shadow);">
+        
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <h1 style="font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 1.75rem; margin-bottom: 0.5rem; color: var(--text-primary);">
+                Verify Account
+            </h1>
+            <p style="font-size: 0.95rem; color: var(--text-muted);">
+                Enter the code sent to your email.
+            </p>
+        </div>
+        
+        <div class="input-group" style="margin-bottom: 1.25rem; text-align: left;">
+            <label class="input-label" style="margin-left: 2px;">Email Address</label>
+            <input @bind="email" class="form-control" type="email" placeholder="name@company.com" style="padding: 1rem;" />
+        </div>
+
+        <div class="input-group" style="margin-bottom: 2rem; text-align: left;">
+            <label class="input-label" style="margin-left: 2px;">Verification Code</label>
+            <input @bind="code" class="form-control" type="text" placeholder="123456" style="padding: 1rem; letter-spacing: 2px; font-weight: 600;" maxlength="6" />
+        </div>
+
+        @if (!string.IsNullOrEmpty(GlobalError))
+        {
+            <div style="background-color: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444; font-size: 0.9rem; padding: 0.75rem; border-radius: var(--radius); margin-bottom: 1.5rem; text-align: center;">
+                @GlobalError
+            </div>
+        }
+        
+        @if (!string.IsNullOrEmpty(SuccessMessage))
+        {
+            <div style="background-color: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; color: #10b981; font-size: 0.9rem; padding: 0.75rem; border-radius: var(--radius); margin-bottom: 1.5rem; text-align: center;">
+                @SuccessMessage
+            </div>
+        }
+
+        <button class="btn btn-primary" @onclick="HandleVerification" disabled="@isLoading" style="width: 100%; padding: 1rem; font-size: 1rem; letter-spacing: 0.5px;">
+            @(isLoading ? "Verifying..." : "Verify & Login")
+        </button>
+
+         <div style="text-align: center; margin-top: 1.5rem; font-size: 0.95rem;">
+            <a href="login" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;">Back to Login</a>
+        </div>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? EmailParam { get; set; }
+
+    private string email = "";
+    private string code = "";
+    private string GlobalError = "";
+    private string SuccessMessage = "";
+    private bool isLoading = false;
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrEmpty(EmailParam))
+        {
+            email = EmailParam;
+        }
+    }
+
+    [SupplyParameterFromQuery]
+    public bool AutoResend { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(EmailParam))
+        {
+            email = EmailParam;
+            if (AutoResend)
+            {
+                await ResendCode();
+            }
+        }
+    }
+
+    private async Task ResendCode()
+    {
+        isLoading = true;
+        try
+        {
+            await Api.ResendVerificationCode(email);
+            // Show toast or temporary success message? 
+            // For now let's just use a UI indication if you want, or just rely on email arrival.
+            // But we can navigate to a 'code sent' state or just stay here.
+            // Let's stay here but maybe show a message.
+        }
+        catch (Exception ex)
+        {
+             Nav.NavigateTo($"/verification-result?status=failure&message={Uri.EscapeDataString("Resend failed: " + ex.Message)}");
+        }
+        isLoading = false;
+        // Since we are likely OnInitialized, we need StateHasChanged if not auto
+        StateHasChanged();
+    }
+
+    private async Task HandleVerification()
+    {
+        isLoading = true;
+        
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(code))
+        {
+            Nav.NavigateTo($"/verification-result?status=failure&message=Please+enter+both+email+and+code");
+            isLoading = false;
+            return;
+        }
+
+        try 
+        {
+            await Api.VerifyAccount(email, code);
+            Nav.NavigateTo("/verification-result?status=success");
+        }
+        catch (Exception ex)
+        {
+            var msg = Uri.EscapeDataString(ex.Message);
+            Nav.NavigateTo($"/verification-result?status=failure&message={msg}");
+        }
+        
+        isLoading = false;
+    }
+}

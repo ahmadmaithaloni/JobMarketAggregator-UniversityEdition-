@@ -1,0 +1,72 @@
+﻿@inherits LayoutComponentBase
+@inject BlazorFrontend.Services.ApiService Api
+
+@implements IDisposable
+@inject NavigationManager Nav
+
+<div class="page">
+    <!-- Top Bar -->
+    <div class="top-bar" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: var(--bg-card); position: sticky; top: 0; z-index: 50; border-bottom: 1px solid var(--border); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.1);">
+        <div style="display: flex; align-items: center; gap: 2rem;">
+            <a href="dashboard" class="brand" style="font-weight: 800; font-size: 1.5rem; color: var(--text-main); text-decoration: none; letter-spacing: -1px;">JobMarketAggregator</a>
+            
+            <!-- Desktop Nav Links -->
+            <nav style="display: flex; gap: 1.5rem;">
+                <NavLink href="dashboard" Match="NavLinkMatch.All" style="color: var(--text-muted); text-decoration: none; font-weight: 500; font-size: 0.95rem; transition: color 0.2s;" ActiveClass="active-link">Home</NavLink>
+                @if (Api.CurrentUser != null)
+                {
+                    <NavLink href="profile" style="color: var(--text-muted); text-decoration: none; font-weight: 500; font-size: 0.95rem; transition: color 0.2s;" ActiveClass="active-link">Profile</NavLink>
+                }
+            </nav>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 1.5rem;">
+            <!-- Greeting & Actions -->
+            @if (Api.CurrentUser != null)
+            {
+                <span style="font-size: 0.9rem; color: var(--text-muted);">
+                    Hello, <span style="color: var(--text-main); font-weight: 600;">@Api.CurrentUser.UserName</span>
+                </span>
+                
+                <button @onclick="Logout" style="background: transparent; cursor: pointer; color: var(--text-muted); text-decoration: none; font-size: 0.9rem; font-weight: 500; border: 1px solid var(--border); padding: 0.4rem 0.8rem; border-radius: 6px; transition: all 0.2s;">Log Out</button>
+            }
+            else
+            {
+                <a href="/" style="color: var(--text-main); text-decoration: none; font-weight: 600; font-size: 0.95rem;">Login</a>
+            }
+
+            <div style="width: 1px; height: 24px; background: var(--border);"></div>
+
+            <button class="btn" onclick="toggleTheme()" style="background: transparent; padding: 0.5rem; color: var(--text-main); border: 1px solid var(--border);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="5"/>
+                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="content fade-in" style="padding-top: 2rem; max-width: 1200px; margin: 0 auto;">
+            @Body
+        </div>
+    </div>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Api.OnAuthStateChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        Api.OnAuthStateChanged -= StateHasChanged;
+    }
+
+    private void Logout()
+    {
+        Api.Logout();
+        Nav.NavigateTo("/");
+    }
+}

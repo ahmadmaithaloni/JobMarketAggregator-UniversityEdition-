@@ -1,0 +1,140 @@
+@page "/job-details"
+@inject ApiService Api
+@inject NavigationManager Nav
+
+<div class="container fade-in" style="max-width: 800px; padding-top: 1rem; padding-bottom: 4rem;">
+    <!-- Navigation -->
+    <button class="btn" style="background: transparent; color: var(--text-muted); margin-bottom: 1.5rem; padding-left: 0; font-weight: 500; display: flex; align-items: center; gap: 0.5rem;" @onclick="GoBack">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+        Back to Dashboard
+    </button>
+
+    @if (Api.SelectedJob == null)
+    {
+        <div class="card" style="text-align: center; padding: 4rem 2rem; display: flex; flex-direction: column; align-items: center;">
+            <div style="margin-bottom: 1rem; color: var(--text-muted); opacity: 0.5;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            </div>
+            <h3 style="margin-bottom: 1rem;">No Job Selected</h3>
+            <p style="margin-bottom: 2rem;">Please go back and select a job to view details.</p>
+            <button class="btn btn-primary" @onclick="GoBack">Return to Dashboard</button>
+        </div>
+    }
+    else
+    {
+        <!-- Main Job Card -->
+        <div class="card" style="padding: 0; overflow: hidden; border: 1px solid var(--border);">
+            
+            <!-- 1. Header Section (Title & Metadata) -->
+            <div style="padding: 2rem 2rem 1.5rem 2rem; border-bottom: 1px solid var(--border); background: var(--bg-surface);">
+                <h1 style="font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.75rem; line-height: 1.3; margin-bottom: 1.5rem;">
+                    @Api.SelectedJob.JobName
+                </h1>
+
+                <!-- Metadata Chips -->
+                <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+                    <!-- Location -->
+                    <span style="display: flex; align-items: center; gap: 0.4rem; background: var(--bg-card); color: var(--text-main); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 500; border: 1px solid var(--border);">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                        @Api.SelectedJob.JobLocation
+                    </span>
+                    
+                    <span style="display: flex; align-items: center; gap: 0.4rem; background: var(--bg-card); color: var(--text-main); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 500; border: 1px solid var(--border);">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                        @Api.SelectedJob.SiteName
+                    </span>
+
+                    <!-- Date Posted -->
+                    @if (!string.IsNullOrEmpty(Api.SelectedJob.JobDatePosted))
+                    {
+                        <span style="display: flex; align-items: center; gap: 0.4rem; background: var(--bg-card); color: var(--text-main); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 500; border: 1px solid var(--border);">
+                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                             @FormatDate(Api.SelectedJob.JobDatePosted)
+                        </span>
+                    }
+
+                    <!-- Availability Badge -->
+                    @if (Api.SelectedJob.IsAvailable)
+                    {
+                        <span style="display: flex; align-items: center; gap: 0.4rem; background: rgba(34, 197, 94, 0.1); color: #16a34a; padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; border: 1px solid rgba(34, 197, 94, 0.2);">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="12"/></svg>
+                            Active
+                        </span>
+                    }
+                    else
+                    {
+                         <span style="display: flex; align-items: center; gap: 0.4rem; background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; border: 1px solid rgba(239, 68, 68, 0.2);">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="12"/></svg>
+                            Closed
+                        </span>
+                    }
+                </div>
+            </div>
+
+            <!-- 2. Action & Notes Section -->
+            <div style="padding: 1.5rem 2rem; background: var(--bg-card);">
+                 <!-- Notes (if any) -->
+                @if (!string.IsNullOrEmpty(Api.SelectedJob.JobNotes))
+                {
+                    <div style="margin-bottom: 1.5rem; padding: 1.5rem; border-radius: 12px; background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); color: var(--text-main);">
+                        <strong style="color: #3b82f6; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; font-size: 0.95rem;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            Key Skills
+                        </strong>
+                        
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+                            @foreach (var skillRaw in Api.SelectedJob.JobNotes.Split(new[] { ',', ';', '•', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                            {
+                                var skill = skillRaw.Trim();
+                                if (string.IsNullOrWhiteSpace(skill)) continue;
+
+                                bool isLong = skill.Length > 60;
+                                string dynamicStyle = isLong 
+                                    ? "width: 100%; border-radius: 8px; padding: 0.75rem; line-height: 1.5;" // "List item" look for sentences
+                                    : "border-radius: 20px; padding: 0.25rem 0.75rem;"; // "Pill" look for keywords
+
+                                <span style="background: var(--bg-surface); border: 1px solid var(--border); font-size: 0.85rem; font-weight: 500; color: var(--text-main); @dynamicStyle">
+                                    @skill
+                                </span>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <!-- Apply Button (Prominent) -->
+                <a href="@Api.SelectedJob.JobUrl" target="_blank" class="btn btn-primary" style="width: 100%; text-decoration: none; justify-content: center; padding: 1rem; font-size: 1rem; letter-spacing: 0.5px; gap: 0.5rem; box-sizing: border-box;">
+                    Apply Now
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                </a>
+            </div>
+
+            <!-- 3. Description Section -->
+            <div style="padding: 2rem; border-top: 1px solid var(--border); background: var(--bg-card);">
+                <h3 style="font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.75rem; color: var(--text-main);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="3" y2="18"/></svg>
+                    Description
+                </h3>
+                <div style="color: var(--text-muted); line-height: 1.8; white-space: pre-wrap; font-size: 0.95rem;">
+                    @Api.SelectedJob.JobDescription
+                </div>
+            </div>
+
+        </div>
+    }
+</div>
+
+@code {
+    private void GoBack()
+    {
+        Nav.NavigateTo("results"); // Changed from "dashboard" to keep context
+    }
+
+    private string FormatDate(string dateStr)
+    {
+        if (DateTime.TryParse(dateStr, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime dt))
+        {
+            return dt.ToString("dd MMM yyyy, hh:mm tt"); // e.g. 12 Jan 2026, 08:30 PM
+        }
+        return dateStr; // Fallback to original string if not parseable
+    }
+}
