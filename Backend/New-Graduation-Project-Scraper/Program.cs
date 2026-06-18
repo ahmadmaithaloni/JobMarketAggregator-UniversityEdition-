@@ -9,6 +9,8 @@ using WebApplication1.Models;
 using ScraperAPI.Services.VerificationService;
 using ScraperAPI.Options;
 
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -19,7 +21,7 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 });
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
-builder.Services.AddDbContext<ScrapingEngineDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))); // regester the DbContext
+builder.Services.AddDbContext<ScrapingEngineDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))); // regester the DbContext
 builder.Services.AddScoped<ILocationMapperService, LocationMapper>(); // register the location mapper service
 builder.Services.AddScoped<IScrapingService, DynamicScrapingEngine>(); // regester the dynamic scraping engine as scraping service
 builder.Services.AddScoped<IScraperService, BaytScraper>(); // first scraper regestration under scraping engine
